@@ -69,3 +69,21 @@ Work through these as separate phases. At the end of each phase, commit, update 
 - At the end of every session, update this `BRIEF.md` with a "Status" section listing what is done and what is next, so the next session can pick up cleanly.
 
 Start with your plan for phase 1.
+
+---
+
+## Status
+
+_Updated at the end of every session. Newest first._
+
+### 2026-09-12 — after session 1
+
+**Done**
+- Phase 1 complete: git repo on `main`, folder layout, `.gitignore`, `LICENSE`, `requirements.txt`, placeholder `public/index.html`, README outline, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (ADR-001 to ADR-004), `docs/DEVLOG.md`, `CHANGELOG.md`. Two commits.
+
+**Next**
+- Phase 2: station dataset. Write `scripts/build_stations.py` → `data/stations.json`; choose TfL Unified API vs. OSM extract and log it; validate the count; spot-check five stations against a verifiable source. Stop for review.
+
+**Open questions / notes for next session**
+- Borough is not in TfL's station data; plan is point-in-polygon against London Datastore borough boundaries (check licence — expected to be OGL v3).
+- Tile source licence must be shown before the full render (phase 3).
