@@ -38,6 +38,37 @@ The deployed site is `public/` and nothing else. No server, no API calls, no bui
 
 Note: `public/` needs read access to `data/*.json`. How that is done (copy at build time vs. symlink vs. keeping data inside `public/`) is decided in phase 4 and recorded here.
 
+## Station data (`data/stations.json`)
+
+Built by `scripts/build_stations.py`. Top level is `{"meta": …, "stations": […]}`;
+`meta` carries the generation timestamp, the count, a map of line id → display
+name, and the attribution strings. One station record looks like:
+
+```json
+{
+  "name": "Turnham Green",
+  "slug": "turnham-green",
+  "naptan": "940GZZLUTNG",
+  "lat": 51.495227, "lon": -0.254568,
+  "zones": [2, 3],
+  "lines": ["district", "piccadilly"],
+  "borough": "Hounslow",
+  "adjacent": ["acton-town", "chiswick-park", "gunnersbury", "hammersmith-district-and-piccadilly", "stamford-brook"]
+}
+```
+
+- `slug` names the map folder (`public/maps/<slug>/`) and is asserted unique.
+- `lines` use TfL ids; the front end owns the display names and colours.
+- `adjacent` lists every station one stop away on any line, derived from TfL's
+  ordered route sequences. This is what the 🟨 share-grid rule uses.
+- `borough` is a London borough, `City of Westminster` / `City of London`, or
+  the county for the 16 stations outside Greater London (Essex, Hertfordshire,
+  Buckinghamshire).
+- Same-named stations keep TfL's disambiguator, spelled out: `Edgware Road
+  (Bakerloo)` and `Edgware Road (Circle)`, `Hammersmith (District &
+  Piccadilly)` and `Hammersmith (Hammersmith & City)`, `Paddington` and
+  `Paddington (Hammersmith & City)`.
+
 ## Date seeding _(pending — phase 5)_
 
 Planned logic, to be confirmed when implemented:
@@ -59,7 +90,7 @@ One hint per wrong guess, always in this order: zone → line(s) → borough →
 
 ## Share grid
 
-Per guess: 🟩 correct, 🟨 same line as the answer **or** an adjacent station on any line, ⬛ otherwise. Adjacency needs the line ordering of stations, which is captured in phase 2 if the data source provides it cheaply; otherwise 🟨 means "shares a line" only and this document says so.
+Per guess: 🟩 correct, 🟨 same line as the answer **or** an adjacent station on any line, ⬛ otherwise. Adjacency comes from the `adjacent` list in each station record (see above), so both halves of the rule are cheap to evaluate client-side.
 
 ## State stored in the browser
 

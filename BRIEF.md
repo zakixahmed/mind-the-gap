@@ -76,7 +76,19 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
-### 2026-09-12 — after session 1
+### 2026-09-12 — after session 1 (phase 2)
+
+**Done**
+- Phase 2 complete: `scripts/build_stations.py` → `data/stations.json` (272 stations, validated, spot-checked). ADR-005 to ADR-007 logged. Raw API responses cached in `data/raw/` (git-ignored) on Zack's Mac.
+
+**Next**
+- Phase 3: map rendering. Pick a tile source with a licence that permits bulk pre-rendering, show the licence, render five stations at six blur levels, get sign-off on the blur curve, then render all 272.
+
+**Open questions / notes for next session**
+- Network: api.tfl.gov.uk and openstreetmap.org are blocked from Claude's shells; scripts that need the network run in Zack's own Terminal (`source .venv/bin/activate` first). Tile downloads in phase 3 will be the same.
+- Delete permission on the folder must be granted each session so git can remove its lock files.
+
+### 2026-09-12 — after session 1 (phase 1)
 
 **Done**
 - Phase 1 complete: git repo on `main`, folder layout, `.gitignore`, `LICENSE`, `requirements.txt`, placeholder `public/index.html`, README outline, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (ADR-001 to ADR-004), `docs/DEVLOG.md`, `CHANGELOG.md`. Two commits.
