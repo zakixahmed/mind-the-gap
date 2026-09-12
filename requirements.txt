@@ -1,0 +1,4 @@
+# Data pipeline dependencies only. The game itself (public/) has none.
+# Install with:  python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+requests==2.32.3   # TfL / tile HTTP calls (scripts/build_stations.py, scripts/render_maps.py)
+Pillow==10.4.0     # image stitching, cropping and Gaussian blur (scripts/render_maps.py)

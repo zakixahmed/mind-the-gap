@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Pipeline scratch (raw API responses, intermediate downloads)
+data/raw/
+data/cache/
+
+# Rendered map crops are committed so GitHub Pages can serve them.
+# If public/maps/ ever exceeds ~50 MB, uncomment the line below and
+# follow README "Regenerating the map data" instead.
+# public/maps/*/
