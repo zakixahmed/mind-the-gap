@@ -12,7 +12,10 @@ that is required. See docs/DECISIONS.md, ADR-008.
 
 Output
 ------
-    public/maps/<slug>/1.png … 6.png     1 = most blurred (guess 1), 6 = sharp (guess 6)
+    public/maps/<slug>/1.webp … 6.webp   1 = most blurred (guess 1), 6 = sharp (guess 6)
+
+WebP rather than PNG: the full set is ~25 MB as WebP (quality 80) against
+~95 MB as palette PNG, and every current browser decodes it. ADR-010.
 
 Usage
 -----
@@ -46,7 +49,13 @@ STATIONS_FILE = ROOT / "data" / "stations.json"
 RAW_DIR = ROOT / "data" / "raw"
 OUT_DIR = ROOT / "public" / "maps"
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Public Overpass instances, tried in order. The main one returns 504 when busy.
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
+WEBP_QUALITY = 80
 USER_AGENT = "mind-the-gap-render-maps/0.1 (zzakiahmedd@gmail.com)"
 OVERPASS_PAUSE = 1.0  # seconds between queries; polite, and well under the public instance's limits
 
@@ -234,11 +243,17 @@ def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict]:
         sys.exit(f"offline mode but no cached OSM data for {slug}")
 
     query = overpass_query(bbox_around(lat, lon, AREA_M * 1.15))  # 15% margin so edge features aren't clipped
-    for attempt in range(5):
-        resp = requests.post(OVERPASS_URL, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=120)
-        if resp.status_code in (429, 504):
-            wait = 10 * (attempt + 1)
-            print(f"  overpass busy ({resp.status_code}), waiting {wait}s", file=sys.stderr)
+    for attempt in range(6):
+        url = OVERPASS_URLS[attempt % len(OVERPASS_URLS)]  # rotate mirrors on each retry
+        try:
+            resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=120)
+        except requests.RequestException as exc:
+            print(f"  {url.split('/')[2]}: {exc.__class__.__name__}, trying next mirror", file=sys.stderr)
+            time.sleep(5)
+            continue
+        if resp.status_code in (429, 502, 503, 504):
+            wait = 5 * (attempt + 1)
+            print(f"  {url.split('/')[2]} busy ({resp.status_code}), waiting {wait}s", file=sys.stderr)
             time.sleep(wait)
             continue
         resp.raise_for_status()
@@ -247,7 +262,7 @@ def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict]:
         cache.write_text(json.dumps(data))
         time.sleep(OVERPASS_PAUSE)
         return data["elements"]
-    sys.exit(f"gave up fetching {slug} from Overpass")
+    sys.exit(f"gave up fetching {slug} from Overpass after 6 attempts")
 
 
 # ---------------------------------------------------------------------------
@@ -322,16 +337,14 @@ def draw_map(elements: list[dict], lat: float, lon: float) -> Image.Image:
 def blur_levels(sharp: Image.Image) -> list[Image.Image]:
     """Six images, guess 1 (most blurred) to guess 6 (sharp).
 
-    Each is blurred at full size, downscaled to its LEVEL_SIZES entry, then
-    palette-quantised without dithering: the map is flat colour, so dithering
-    only adds noise that PNG cannot compress.
+    Each is blurred at full size, then downscaled to its LEVEL_SIZES entry.
     """
     out = []
     for radius, size in zip(BLUR_RADII, LEVEL_SIZES):
         img = sharp.filter(ImageFilter.GaussianBlur(radius)) if radius else sharp
         if size != SIZE_PX:
             img = img.resize((size, size), Image.LANCZOS)
-        out.append(img.quantize(colors=128, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE))
+        out.append(img)
     return out
 
 
@@ -341,7 +354,7 @@ def contact_sheet(sets: dict[str, list[Image.Image]], path: Path) -> None:
     sheet = Image.new("RGB", (6 * thumb, len(sets) * thumb), "white")
     for row, levels in enumerate(sets.values()):
         for col, img in enumerate(levels):
-            sheet.paste(img.convert("RGB").resize((thumb, thumb), Image.LANCZOS), (col * thumb, row * thumb))
+            sheet.paste(img.resize((thumb, thumb), Image.LANCZOS), (col * thumb, row * thumb))
     sheet.save(path)
 
 
@@ -375,8 +388,8 @@ def main() -> None:
         folder = OUT_DIR / s["slug"]
         folder.mkdir(parents=True, exist_ok=True)
         for n, img in enumerate(levels, 1):
-            path = folder / f"{n}.png"
-            img.save(path, optimize=True)
+            path = folder / f"{n}.webp"
+            img.save(path, "WEBP", quality=WEBP_QUALITY, method=6)
             total_bytes += path.stat().st_size
         if args.contact_sheet:
             sets[s["slug"]] = levels
