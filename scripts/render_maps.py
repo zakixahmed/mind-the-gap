@@ -234,26 +234,34 @@ def rings(element: dict) -> list[list[dict]]:
 # ---------------------------------------------------------------------------
 
 
-def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict]:
-    """Overpass elements for the station's square, cached in data/raw/osm_<slug>.json."""
+def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict] | None:
+    """Overpass elements for the station's square, cached in data/raw/osm_<slug>.json.
+
+    Returns None if every attempt failed, so the caller can skip the station
+    and keep going; a re-run picks up the gaps from the cache.
+    """
     cache = RAW_DIR / f"osm_{slug}.json"
     if cache.exists():
         return json.loads(cache.read_text())["elements"]
     if offline:
-        sys.exit(f"offline mode but no cached OSM data for {slug}")
+        print(f"  no cached OSM data for {slug} (offline)", file=sys.stderr)
+        return None
 
     query = overpass_query(bbox_around(lat, lon, AREA_M * 1.15))  # 15% margin so edge features aren't clipped
-    for attempt in range(6):
+    for attempt in range(9):
         url = OVERPASS_URLS[attempt % len(OVERPASS_URLS)]  # rotate mirrors on each retry
+        host = url.split("/")[2]
         try:
             resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=120)
         except requests.RequestException as exc:
-            print(f"  {url.split('/')[2]}: {exc.__class__.__name__}, trying next mirror", file=sys.stderr)
-            time.sleep(5)
+            # Connection errors on every mirror usually mean *our* network dropped; wait longer.
+            wait = 10 * (attempt + 1)
+            print(f"  {host}: {exc.__class__.__name__}, waiting {wait}s", file=sys.stderr)
+            time.sleep(wait)
             continue
         if resp.status_code in (429, 502, 503, 504):
             wait = 5 * (attempt + 1)
-            print(f"  {url.split('/')[2]} busy ({resp.status_code}), waiting {wait}s", file=sys.stderr)
+            print(f"  {host} busy ({resp.status_code}), waiting {wait}s", file=sys.stderr)
             time.sleep(wait)
             continue
         resp.raise_for_status()
@@ -262,7 +270,8 @@ def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict]:
         cache.write_text(json.dumps(data))
         time.sleep(OVERPASS_PAUSE)
         return data["elements"]
-    sys.exit(f"gave up fetching {slug} from Overpass after 6 attempts")
+    print(f"  giving up on {slug} for now; re-run to retry", file=sys.stderr)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -381,9 +390,13 @@ def main() -> None:
 
     sets: dict[str, list[Image.Image]] = {}
     total_bytes = 0
+    failed: list[str] = []
     for i, s in enumerate(stations, 1):
         print(f"[{i}/{len(stations)}] {s['name']}")
         elements = fetch_osm(s["slug"], s["lat"], s["lon"], args.offline)
+        if elements is None:
+            failed.append(s["slug"])
+            continue
         levels = blur_levels(draw_map(elements, s["lat"], s["lon"]))
         folder = OUT_DIR / s["slug"]
         folder.mkdir(parents=True, exist_ok=True)
@@ -394,8 +407,12 @@ def main() -> None:
         if args.contact_sheet:
             sets[s["slug"]] = levels
 
-    print(f"\nwrote {len(stations) * 6} images, {total_bytes / 1_048_576:.1f} MB total "
-          f"({total_bytes / len(stations) / 1024:.0f} KB per station)")
+    done = len(stations) - len(failed)
+    print(f"\nwrote {done * 6} images for {done} stations, {total_bytes / 1_048_576:.1f} MB total "
+          f"({total_bytes / max(done, 1) / 1024:.0f} KB per station)")
+    if failed:
+        print(f"FAILED ({len(failed)}), run again to retry: {', '.join(failed)}", file=sys.stderr)
+        sys.exit(1)
     if args.contact_sheet:
         path = RAW_DIR / "contact_sheet.png"
         contact_sheet(sets, path)
