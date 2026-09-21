@@ -4,6 +4,24 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-20 — Session 2: Phase 3, map rendering (in progress)
+
+**Built**
+- `scripts/render_maps.py`: fetches raw OpenStreetMap data for a 1 km square per station from the Overpass API, draws a label-free map with Pillow at 2x supersampling, and writes six blur levels. Flags: `--only`, `--offline`, `--contact-sheet`.
+- Tile sources investigated and rejected — see ADR-008. Drawing from raw ODbL data instead means the only obligation is the "© OpenStreetMap contributors" attribution, and crucially the maps carry no station labels to give the answer away.
+- Blur curve `[36, 20, 10, 5, 2, 0]` reviewed on five stations (Amersham, Bank, Hainault, Turnham Green, Westminster) and signed off.
+- Output format switched from PNG to WebP after measuring: ~14 MB for the full set against ~95 MB, so the rendered maps can stay in the repository.
+
+**Broke**
+- Multipolygon water rendered as nothing: the Thames arrives as ~31 separate ways clipped to the bbox, not a closed ring. Added `stitch()` to chain open segments end-to-end.
+- A dropped network connection killed a whole 272-station run. The renderer now skips the station, carries on, and lists failures at the end so a re-run fills the gaps.
+- Public Overpass instances were heavily loaded all weekend (504s, timeouts). Added two mirrors with rotation on retry.
+- Progress lines were buffered when redirected to a log file, so `tail render.log` showed only errors. Fixed with line buffering.
+
+**Next**
+- Finish the full render: 94 of 272 stations are cached and rendered. Re-run `python scripts/render_maps.py` to continue; it resumes from the cache.
+- Then: commit `public/maps/`, confirm the total size against the 50 MB threshold (ADR-003), update README/ARCHITECTURE/CHANGELOG, and move to phase 4 (game UI with one hardcoded puzzle).
+
 ## 2026-09-12 — Session 1 (continued): Phase 2, station dataset
 
 **Built**

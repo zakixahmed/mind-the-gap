@@ -76,6 +76,22 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-20 — after session 2 (phase 3, part-done)
+
+**Done**
+- `scripts/render_maps.py` written, reviewed and committed. Blur curve signed off on five stations. WebP chosen over PNG (ADR-010). Thames/multipolygon stitching, mirror rotation and failure-tolerance all fixed.
+- 94 of 272 stations fetched, cached in `data/raw/` and rendered to `public/maps/<slug>/1-6.webp`.
+
+**Next — start here**
+1. In Terminal: `cd ~/Documents/'Portfolio Website '/'Mind the Gap - web game'` then `source .venv/bin/activate` then `nohup python scripts/render_maps.py > render.log 2>&1 &`. It resumes from the cache at station 95. Check with `tail -3 render.log`. Re-run if it ends with a FAILED line.
+2. Commit `public/maps/`, check the total against the 50 MB threshold (ADR-003 is still *Proposed* pending this number), update README/ARCHITECTURE/CHANGELOG, close out phase 3.
+3. Phase 4: game UI with one hardcoded puzzle; screenshots at 375 px and 1280 px.
+
+**Open questions / notes for next session**
+- Public Overpass instances have been slow and flaky; the renderer tolerates it but the full run takes an hour or more. Keep the Mac awake.
+- Network: api.tfl.gov.uk and openstreetmap.org are blocked from Claude's shells, so anything needing the network runs in Zack's own Terminal.
+- Delete permission on the folder must be granted each session so git can remove its lock files.
+
 ### 2026-09-12 — after session 1 (phase 2)
 
 **Done**

@@ -33,3 +33,6 @@ data/cache/
 # If public/maps/ ever exceeds ~50 MB, uncomment the line below and
 # follow README "Regenerating the map data" instead.
 # public/maps/*/
+
+# Background render log (nohup python scripts/render_maps.py > render.log)
+render.log

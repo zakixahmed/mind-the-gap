@@ -374,6 +374,10 @@ def contact_sheet(sets: dict[str, list[Image.Image]], path: Path) -> None:
 
 def main() -> None:
     """Parse flags, then fetch → draw → blur → save for each selected station."""
+    # Progress lines must reach a log file as they happen, not in 8 KB chunks,
+    # otherwise `tail -f render.log` shows only the (unbuffered) error lines.
+    sys.stdout.reconfigure(line_buffering=True)
+
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--only", help="comma-separated slugs to render (default: all)")
     parser.add_argument("--offline", action="store_true", help="use cached Overpass data only")
