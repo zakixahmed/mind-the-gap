@@ -76,6 +76,15 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-22 — after session 3 (phases 4 and 5 complete)
+
+**Done**
+- Phase 5 complete: daily seeding from the London calendar date, curated 100-day schedule, emoji share grid with Web Share API, localStorage stats with resume, countdown, and unlimited practice rounds. ADR-013 to ADR-015 logged.
+
+**Next — start here**
+- Phase 6: polish and playtest. Walk through as a first-time player at phone width, list every friction point, fix them, then add the how-to-play modal (first visit), the light mode toggle, and check the footer attribution reads properly.
+- Content backlog, not blocking: `public/data/facts.json` has 20 of the 100 scheduled stations. The rest fall back to a generated sentence, which is accurate but plainer. Worth topping up over time.
+
 ### 2026-09-22 — after session 3 (phase 4 complete, two review changes)
 
 **Review changes from Zack**

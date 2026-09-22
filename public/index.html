@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mind the Gap</title>
-<meta name="description" content="A daily puzzle: guess the London Underground station from a blurred map.">
+<meta name="description" content="Guess the London Underground station from a blurred map. A new puzzle every day, plus unlimited practice rounds.">
 <meta name="theme-color" content="#0f1115">
 <style>
 /* ===========================================================================
@@ -28,6 +28,10 @@
 }
 
 * { box-sizing: border-box; }
+
+/* Any element with its own `display` beats the browser's `[hidden]` rule, so
+   toggling .hidden silently does nothing. Make the attribute authoritative. */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -291,6 +295,83 @@ h1 .bar {                      /* the roundel-ish bar through the title */
 }
 #endscreen a.osm:hover { border-color: var(--accent); }
 
+
+/* --------------------------------------------------- end screen actions -- */
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.btn {
+  font: inherit;
+  font-size: .87rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; font-weight: 500; }
+
+/* ---------------------------------------------------------------- stats -- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.stat { text-align: center; }
+.stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.dist { margin-top: 12px; display: grid; gap: 3px; }
+.dist-row { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
+.dist-n { color: var(--muted); width: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.dist-bar {
+  background: var(--far);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 1px 7px;
+  text-align: right;
+  min-width: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.dist-bar.mine { background: var(--correct); }
+
+.countdown {
+  margin-top: 14px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.countdown span { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.practice-note { font-size: .8rem; color: var(--muted); margin: 10px 0 0; }
+
+/* ----------------------------------------------------------- mode badge -- */
+#mode-badge {
+  display: inline-block;
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
 /* --------------------------------------------------------------- footer -- */
 footer {
   margin-top: 28px;
@@ -323,7 +404,7 @@ footer a { color: var(--muted); }
 <div class="wrap">
 
   <header>
-    <h1>Mind the <span class="bar">Gap</span></h1>
+    <h1>Mind the <span class="bar">Gap</span><span id="mode-badge" hidden>Practice</span></h1>
     <div class="puzzle-no" id="puzzle-no">Puzzle #1</div>
   </header>
 
@@ -340,7 +421,7 @@ footer a { color: var(--muted); }
     <ul id="hints" aria-label="Hints"></ul>
     <ol id="guesses" aria-label="Your guesses"></ol>
 
-    <div class="search">
+    <div class="search" id="search">
       <ul id="suggestions" role="listbox" aria-label="Station suggestions" hidden></ul>
       <label for="guess-input" class="sr-only">Guess a station</label>
       <input id="guess-input" type="text" role="combobox" aria-expanded="false"
@@ -364,16 +445,17 @@ footer a { color: var(--muted); }
 <script>
 "use strict";
 /* ===========================================================================
-   Mind the Gap — core game loop.
+   Mind the Gap — game logic.
 
-   Phase 4: one hardcoded puzzle. Date seeding, the share grid, stats and the
-   countdown arrive in phase 5; the places they slot into are marked TODO(p5).
+   Two modes (ADR-013):
+     daily    — one puzzle a day, the same for everyone, counts towards stats,
+                shareable, resumes if you reload.
+     practice — unlimited random stations, no stats, no sharing.
    ========================================================================= */
 
-/** The puzzle. Phase 5 replaces this with days-since-launch → schedule lookup. */
-const PUZZLE = { slug: "baker-street", number: 1 };
-
 const MAX_GUESSES = 6;
+
+const STORE = { stats: "mtg:stats", daily: "mtg:daily", recent: "mtg:recent" };
 
 /** Official TfL line colours — used for hint chips and suggestion bars. */
 const LINE_COLOURS = {
@@ -383,43 +465,129 @@ const LINE_COLOURS = {
   "victoria": "#0098D4", "waterloo-city": "#95CDBA",
 };
 
-/* One fact per puzzle station. Kept inline while there is exactly one; phase 5
-   moves this to public/data/facts.json alongside the 100-day schedule. */
-const FACTS = {
-  "baker-street": "Baker Street opened in 1863 on the Metropolitan Railway, the world's first underground railway — its platforms are among the oldest still in use anywhere. The Sherlock Holmes silhouettes tiled along the walls were added in 1979.",
-};
+const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
 
 /** Mutable game state. */
 const state = {
-  stations: [],          // every station, as loaded
-  bySlug: new Map(),
+  stations: [], bySlug: new Map(), lines: {}, schedule: [], facts: {},
+  mode: "daily",          // "daily" | "practice"
+  puzzleNumber: 0,        // daily only
   answer: null,
-  guesses: [],           // slugs, in order
-  status: "playing",     // "playing" | "won" | "lost"
-  highlighted: -1,       // index into the current suggestion list
-  matches: [],
+  guesses: [],
+  status: "playing",      // "playing" | "won" | "lost"
+  dailyResult: null,      // { guesses, status } kept while practising
+  matches: [], highlighted: -1,
 };
 
 const $ = (id) => document.getElementById(id);
-const els = {
-  map: $("map"), mapFrame: $("map-frame"), level: $("level-label"),
-  remaining: $("remaining"), hints: $("hints"), guesses: $("guesses"),
-  input: $("guess-input"), suggestions: $("suggestions"), inputHint: $("input-hint"),
-  end: $("endscreen"), puzzleNo: $("puzzle-no"),
-};
+
+/* Element cache: {property: elementId}. Spelled out rather than derived from
+   the ids, so a rename in the markup fails loudly here instead of leaving an
+   undefined lying around. */
+const els = {};
+for (const [prop, id] of Object.entries({
+  map: "map", mapFrame: "map-frame", levelLabel: "level-label", remaining: "remaining",
+  hints: "hints", guesses: "guesses", input: "guess-input", suggestions: "suggestions",
+  inputHint: "input-hint", endscreen: "endscreen", puzzleNo: "puzzle-no",
+  modeBadge: "mode-badge", search: "search",
+})) {
+  els[prop] = $(id);
+  if (!els[prop]) console.error(`Missing element #${id}`);
+}
+
+/* ------------------------------------------------------- dates & seeding -- */
+
+/** Today's date in London as "YYYY-MM-DD", regardless of the visitor's timezone. */
+function londonDate(when = new Date()) {
+  // en-CA formats as YYYY-MM-DD, which sorts and parses cleanly.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(when);
+}
+
+/** Whole days between two "YYYY-MM-DD" strings. */
+function daysBetween(fromISO, toISO) {
+  // Parsed as UTC midnights, so the arithmetic never meets a DST transition:
+  // comparing calendar dates is exactly what we want, not elapsed time.
+  const [y1, m1, d1] = fromISO.split("-").map(Number);
+  const [y2, m2, d2] = toISO.split("-").map(Number);
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+}
+
+/** Puzzle number for a London date. Day 1 is the launch date. */
+function puzzleNumberFor(launchISO, dateISO) {
+  return daysBetween(launchISO, dateISO) + 1;
+}
+
+/** Milliseconds until the London date next changes, i.e. until the next puzzle.
+ *
+ *  Found by bisection rather than by adding 24 hours: on the two days a year
+ *  when the clocks change, "tomorrow midnight" is 23 or 25 hours away, and
+ *  every offset-arithmetic version of this is wrong twice a year.
+ */
+function msUntilNextLondonDay() {
+  const now = Date.now();
+  const today = londonDate(new Date(now));
+  let lo = now, hi = now + 26 * 3600 * 1000;
+  while (hi - lo > 500) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (londonDate(new Date(mid)) === today) lo = mid; else hi = mid;
+  }
+  return hi - now;
+}
+
+/* ----------------------------------------------------------- local store -- */
+
+/* Every read is defensive: localStorage throws in private windows on some
+   browsers, and a half-written value should never stop the game loading. */
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* full or blocked */ }
+}
+
+function blankStats() {
+  return { played: 0, wins: 0, streak: 0, maxStreak: 0, lastPlayed: null, dist: [0, 0, 0, 0, 0, 0] };
+}
+
+/** Fold the finished daily game into the saved stats, exactly once. */
+function recordDaily() {
+  const stats = load(STORE.stats, blankStats());
+  if (stats.lastPlayed === state.puzzleNumber) return;   // already counted
+
+  stats.played += 1;
+  if (state.status === "won") {
+    stats.wins += 1;
+    stats.dist[state.guesses.length - 1] += 1;
+    // A streak survives only if yesterday's puzzle was the one before this.
+    stats.streak = stats.lastPlayed === state.puzzleNumber - 1 ? stats.streak + 1 : 1;
+    stats.maxStreak = Math.max(stats.maxStreak, stats.streak);
+  } else {
+    stats.streak = 0;
+  }
+  stats.lastPlayed = state.puzzleNumber;
+  save(STORE.stats, stats);
+}
+
+function saveDaily() {
+  if (state.mode !== "daily") return;
+  save(STORE.daily, { n: state.puzzleNumber, guesses: state.guesses, status: state.status });
+}
 
 /* --------------------------------------------------------------- helpers -- */
 
 /** Fold case, accents and punctuation so "St. John's Wood" matches "st johns". */
 function normalise(text) {
-  return text
-    .toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // strip accents
+  return text.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
-/** Display name for a line id, falling back to a tidied id if it is unknown. */
 function lineName(id) {
   return state.lines[id] || id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -430,10 +598,7 @@ function lineName(id) {
    keeping a list in sync by hand. */
 function readableOn(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  // Relative luminance, WCAG's coefficients. 0.55 is the crossover that puts
-  // every TfL line on the more readable side.
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.55 ? "#101216" : "#ffffff";
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.55 ? "#101216" : "#ffffff";
 }
 
 function lineChip(id) {
@@ -441,26 +606,31 @@ function lineChip(id) {
   return `<span class="line-chip" style="background:${colour};color:${readableOn(colour)}">${lineName(id)}</span>`;
 }
 
-/* ----------------------------------------------------------- the hints ---- */
+function listWords(items) {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
 
-/* The ladder from the brief, in order. Each returns the HTML for one hint.
-   Hint n is revealed after wrong guess n, so five hints cover guesses 1-5. */
+/** The fact for a station, or a true sentence assembled from its own record. */
+function factFor(s) {
+  if (state.facts[s.slug]) return state.facts[s.slug];
+  const zones = s.zones.length > 1 ? `zones ${listWords(s.zones.map(String))}` : `zone ${s.zones[0]}`;
+  const lines = listWords(s.lines.map(lineName));
+  return `${s.name} is in ${zones}, in ${s.borough}, and is served by the ${lines} line${s.lines.length > 1 ? "s" : ""}.`;
+}
+
+/* ------------------------------------------------------------ the hints --- */
+
 const HINT_LADDER = [
   { label: "Zone", render: (s) => s.zones.length > 1 ? `Zones ${s.zones.join(" and ")}` : `Zone ${s.zones[0]}` },
   { label: "Line", render: (s) => s.lines.map(lineChip).join("") },
   { label: "Borough", render: (s) => s.borough },
   { label: "Starts", render: (s) => `The name starts with <strong>${s.name[0].toUpperCase()}</strong>` },
-  { label: "Length", render: (s) => {
-      // Count letters only: spaces, apostrophes and brackets would give away
-      // more about the shape of the name than intended.
-      const letters = s.name.replace(/[^a-zA-Z]/g, "").length;
-      return `<strong>${letters}</strong> letters`;
-    } },
+  { label: "Length", render: (s) => `<strong>${s.name.replace(/[^a-zA-Z]/g, "").length}</strong> letters` },
 ];
 
 /* ------------------------------------------------------------ rendering --- */
 
-/** Which image to show: guess 1 sees level 1, and the answer is revealed at 6. */
 function currentLevel() {
   if (state.status !== "playing") return MAX_GUESSES;
   return Math.min(state.guesses.length + 1, MAX_GUESSES);
@@ -469,24 +639,23 @@ function currentLevel() {
 function renderMap() {
   const level = currentLevel();
   const next = `maps/${state.answer.slug}/${level}.webp`;
-  if (els.map.getAttribute("src") === next) return;
-
-  // Fade out, swap once the new file has decoded, fade back in — without this
-  // the sharper level pops in halfway loaded and looks like a glitch.
-  els.mapFrame.classList.add("swapping");
-  const img = new Image();
-  img.onload = img.onerror = () => {
-    els.map.src = next;
-    els.mapFrame.classList.remove("swapping");
-  };
-  img.src = next;
-
-  els.level.textContent = `Blur level ${level} of ${MAX_GUESSES}`;
+  if (els.map.getAttribute("src") !== next) {
+    // Fade out, swap once the new file has decoded, fade back in — without the
+    // wait the sharper level appears half-loaded and reads as a glitch.
+    els.mapFrame.classList.add("swapping");
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      els.map.src = next;
+      els.mapFrame.classList.remove("swapping");
+    };
+    img.src = next;
+  }
+  els.levelLabel.textContent = `Blur level ${level} of ${MAX_GUESSES}`;
+  // Warm the next level so the swap after a wrong guess is instant.
+  if (level < MAX_GUESSES) new Image().src = `maps/${state.answer.slug}/${level + 1}.webp`;
 }
 
 function renderHints() {
-  // One hint per wrong guess. A correct guess ends the game, so the count of
-  // wrong guesses is simply the number of guesses made.
   const revealed = Math.min(state.guesses.length, HINT_LADDER.length);
   els.hints.innerHTML = "";
   for (let i = 0; i < revealed; i++) {
@@ -502,28 +671,20 @@ function verdict(slug) {
   if (slug === state.answer.slug) return "correct";
   const guess = state.bySlug.get(slug);
   const sharesLine = guess.lines.some((l) => state.answer.lines.includes(l));
-  const adjacent = state.answer.adjacent.includes(slug);
-  return (sharesLine || adjacent) ? "near" : "far";
+  return (sharesLine || state.answer.adjacent.includes(slug)) ? "near" : "far";
 }
 
-const VERDICT_NOTE = {
-  correct: "",
-  near: "same line or next door",
-  far: "not close",
-};
+const VERDICT_NOTE = { correct: "", near: "same line or next door", far: "not close" };
 
 function renderGuesses() {
   els.guesses.innerHTML = "";
-  // Only the guesses actually made, plus a single slim placeholder for the
-  // next one. Drawing all six empty rows up front pushed the search box below
-  // the fold on a phone, which is the one thing that must never happen.
+  // Only the guesses actually made, plus one slim placeholder. Drawing all six
+  // empty rows up front pushed the search box below the fold on a phone.
   for (const slug of state.guesses) {
     const v = verdict(slug);
     const li = document.createElement("li");
-    li.innerHTML =
-      `<span class="dot ${v}"></span>` +
-      `<span>${state.bySlug.get(slug).name}</span>` +
-      `<span class="guess-note">${VERDICT_NOTE[v]}</span>`;
+    li.innerHTML = `<span class="dot ${v}"></span><span>${state.bySlug.get(slug).name}</span>` +
+                   `<span class="guess-note">${VERDICT_NOTE[v]}</span>`;
     els.guesses.appendChild(li);
   }
   if (state.status === "playing") {
@@ -533,28 +694,60 @@ function renderGuesses() {
     els.guesses.appendChild(li);
   }
   const left = MAX_GUESSES - state.guesses.length;
-  els.remaining.textContent =
-    state.status !== "playing" ? "" : `${left} guess${left === 1 ? "" : "es"} left`;
+  els.remaining.textContent = state.status !== "playing" ? "" : `${left} guess${left === 1 ? "" : "es"} left`;
+}
+
+function statsMarkup() {
+  const stats = load(STORE.stats, blankStats());
+  const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+  const most = Math.max(1, ...stats.dist);
+  const rows = stats.dist.map((count, i) => {
+    const mine = state.mode === "daily" && state.status === "won" && state.guesses.length === i + 1;
+    return `<div class="dist-row">
+      <span class="dist-n">${i + 1}</span>
+      <span class="dist-bar${mine ? " mine" : ""}" style="width:${Math.max(6, (count / most) * 100)}%">${count}</span>
+    </div>`;
+  }).join("");
+  return `
+    <div class="stats">
+      <div class="stat"><b>${stats.played}</b><span>played</span></div>
+      <div class="stat"><b>${winPct}%</b><span>won</span></div>
+      <div class="stat"><b>${stats.streak}</b><span>streak</span></div>
+      <div class="stat"><b>${stats.maxStreak}</b><span>best</span></div>
+    </div>
+    <div class="dist">${rows}</div>`;
 }
 
 function renderEnd() {
-  if (state.status === "playing") { els.end.hidden = true; return; }
+  if (state.status === "playing") { els.endscreen.hidden = true; return; }
   const s = state.answer;
   const won = state.status === "won";
   const n = state.guesses.length;
   const heading = won
     ? (n === 1 ? "First guess. Extraordinary." : `Got it in ${n}.`)
     : "Out of guesses.";
-  const fact = FACTS[s.slug] || "";
-  // TODO(p5): share button (emoji grid), stats panel and next-puzzle countdown.
-  els.end.innerHTML = `
+
+  const daily = state.mode === "daily";
+  els.endscreen.innerHTML = `
     <h2>${heading}</h2>
     <div class="answer">${s.name}</div>
-    ${fact ? `<p>${fact}</p>` : ""}
-    <a class="osm" target="_blank" rel="noopener"
-       href="https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lon}#map=16/${s.lat}/${s.lon}">
-       See it on OpenStreetMap →</a>`;
-  els.end.hidden = false;
+    <p>${factFor(s)}</p>
+    <div class="end-actions">
+      <a class="btn ghost" target="_blank" rel="noopener"
+         href="https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lon}#map=16/${s.lat}/${s.lon}">See it on OpenStreetMap</a>
+      ${daily ? `<button class="btn primary" id="share-btn">Share result</button>` : ""}
+      <button class="btn" id="practice-btn">${daily ? "Play a practice round" : "Another practice round"}</button>
+      ${!daily && state.dailyResult ? `<button class="btn ghost" id="back-btn">Back to today's puzzle</button>` : ""}
+    </div>
+    ${daily ? statsMarkup() : `<p class="practice-note">Practice rounds don't count towards your stats.</p>`}
+    ${daily ? `<div class="countdown">Next puzzle in <span id="countdown">…</span></div>` : ""}`;
+  els.endscreen.hidden = false;
+
+  if (daily) $("share-btn").addEventListener("click", share);
+  $("practice-btn").addEventListener("click", startPractice);
+  const back = $("back-btn");
+  if (back) back.addEventListener("click", backToDaily);
+  if (daily) tickCountdown();
 }
 
 function render() {
@@ -562,17 +755,129 @@ function render() {
   renderHints();
   renderGuesses();
   renderEnd();
+  els.search.hidden = state.status !== "playing";
+  els.inputHint.hidden = state.status !== "playing";
+  els.input.disabled = state.status !== "playing";
+  els.modeBadge.hidden = state.mode !== "practice";
+  els.puzzleNo.textContent = state.mode === "daily" ? `Puzzle #${state.puzzleNumber}` : "";
+}
+
+/* --------------------------------------------------------------- sharing -- */
+
+/** The emoji grid, e.g. "Mind the Gap #7 — 4/6". */
+function shareText() {
+  const score = state.status === "won" ? `${state.guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+  const grid = state.guesses.map((slug) => SQUARES[verdict(slug)]).join("");
+  return `Mind the Gap #${state.puzzleNumber} — ${score}\n${grid}\n${location.origin}${location.pathname}`;
+}
+
+async function share() {
+  const text = shareText();
+  const btn = $("share-btn");
+  // The Web Share API needs a user gesture and only exists on (mostly) mobile;
+  // everywhere else, the clipboard is the sensible equivalent.
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "Copied!";
+  } catch (err) {
+    // A cancelled share is not a failure and should say nothing.
+    if (err && err.name === "AbortError") return;
+    btn.textContent = "Press Ctrl+C";
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    setTimeout(() => ta.remove(), 8000);
+    return;
+  }
+  setTimeout(() => { if ($("share-btn")) $("share-btn").textContent = "Share result"; }, 2000);
+}
+
+let countdownTimer = null;
+function tickCountdown() {
+  clearInterval(countdownTimer);
+  const paint = () => {
+    const el = $("countdown");
+    if (!el) { clearInterval(countdownTimer); return; }
+    const ms = msUntilNextLondonDay();
+    const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+    el.textContent = [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+  };
+  paint();
+  countdownTimer = setInterval(paint, 1000);
+}
+
+/* ------------------------------------------------------------ game flow --- */
+
+function submitGuess(slug) {
+  if (state.status !== "playing") return;
+  if (!state.bySlug.has(slug) || state.guesses.includes(slug)) return;
+
+  state.guesses.push(slug);
+  if (slug === state.answer.slug) state.status = "won";
+  else if (state.guesses.length >= MAX_GUESSES) state.status = "lost";
+
+  els.input.value = "";
+  closeSuggestions();
+
+  if (state.mode === "daily") {
+    saveDaily();
+    if (state.status !== "playing") recordDaily();
+  }
+  render();
+}
+
+/** Start a practice round on a station we have not used recently. */
+function startPractice() {
+  if (state.mode === "daily") {
+    state.dailyResult = { guesses: state.guesses.slice(), status: state.status };
+  }
+  const recent = load(STORE.recent, []);
+  // Avoid the day's answer and the last few practice stations, so consecutive
+  // rounds don't repeat. With 272 stations a 30-deep memory is plenty.
+  const avoid = new Set([...recent, state.mode === "daily" ? state.answer.slug : null].filter(Boolean));
+  let pool = state.stations.filter((s) => !avoid.has(s.slug));
+  if (!pool.length) pool = state.stations;
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  save(STORE.recent, [pick.slug, ...recent].slice(0, 30));
+
+  state.mode = "practice";
+  state.answer = pick;
+  state.guesses = [];
+  state.status = "playing";
+  clearInterval(countdownTimer);
+  els.input.value = "";
+  closeSuggestions();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/** Return to the finished daily puzzle from a practice round. */
+function backToDaily() {
+  state.mode = "daily";
+  state.answer = state.bySlug.get(dailySlug());
+  state.guesses = state.dailyResult.guesses.slice();
+  state.status = state.dailyResult.status;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function dailySlug() {
+  // Wrap with modulo: the schedule is 100 days and the game may outlive it.
+  // Repeating after 100 days is a known, documented limitation.
+  const idx = (state.puzzleNumber - 1) % state.schedule.length;
+  return state.schedule[((idx % state.schedule.length) + state.schedule.length) % state.schedule.length];
 }
 
 /* -------------------------------------------------------- autocomplete ---- */
 
-/** Up to 8 matches: names starting with the query first, then names containing it. */
 function findMatches(query) {
   const q = normalise(query);
   if (!q) return [];
   const starts = [], contains = [];
   for (const s of state.stations) {
-    if (state.guesses.includes(s.slug)) continue;   // already tried; don't offer it again
+    if (state.guesses.includes(s.slug)) continue;
     const idx = s.search.indexOf(q);
     if (idx === 0) starts.push(s);
     else if (idx > 0) contains.push(s);
@@ -594,42 +899,19 @@ function renderSuggestions() {
     li.id = `sugg-${i}`;
     li.setAttribute("role", "option");
     li.setAttribute("aria-selected", String(i === state.highlighted));
-    // A slim bar in the station's first line colour, as a glanceable cue.
     li.innerHTML = `<span class="rail" style="background:${LINE_COLOURS[s.lines[0]] || "#555"}"></span>${s.name}`;
     li.addEventListener("mousedown", (e) => { e.preventDefault(); submitGuess(s.slug); });
     els.suggestions.appendChild(li);
   });
   els.suggestions.hidden = false;
   els.input.setAttribute("aria-expanded", "true");
-  const active = list[state.highlighted];
-  els.input.setAttribute("aria-activedescendant", active ? `sugg-${state.highlighted}` : "");
+  els.input.setAttribute("aria-activedescendant", list[state.highlighted] ? `sugg-${state.highlighted}` : "");
 }
 
 function closeSuggestions() {
   state.matches = [];
   state.highlighted = -1;
   renderSuggestions();
-}
-
-/* ------------------------------------------------------------ game flow --- */
-
-function submitGuess(slug) {
-  if (state.status !== "playing") return;
-  if (!state.bySlug.has(slug) || state.guesses.includes(slug)) return;
-
-  state.guesses.push(slug);
-  if (slug === state.answer.slug) state.status = "won";
-  else if (state.guesses.length >= MAX_GUESSES) state.status = "lost";
-
-  els.input.value = "";
-  closeSuggestions();
-  if (state.status !== "playing") {
-    els.input.disabled = true;
-    document.querySelector(".search").hidden = true;
-    els.inputHint.hidden = true;
-  }
-  render();
-  // TODO(p5): persist today's guesses to localStorage so a refresh resumes.
 }
 
 function onInput() {
@@ -642,17 +924,13 @@ function onKeyDown(e) {
   if (state.status !== "playing") return;
   const n = state.matches.length;
   if (e.key === "ArrowDown" && n) {
-    e.preventDefault();
-    state.highlighted = (state.highlighted + 1) % n;
-    renderSuggestions();
+    e.preventDefault(); state.highlighted = (state.highlighted + 1) % n; renderSuggestions();
   } else if (e.key === "ArrowUp" && n) {
-    e.preventDefault();
-    state.highlighted = (state.highlighted - 1 + n) % n;
-    renderSuggestions();
+    e.preventDefault(); state.highlighted = (state.highlighted - 1 + n) % n; renderSuggestions();
   } else if (e.key === "Enter") {
     e.preventDefault();
     // Enter only ever commits a highlighted suggestion — never raw text, so a
-    // misspelling can't be submitted and argued about.
+    // misspelling can't be submitted and argued about (ADR-012).
     if (state.highlighted >= 0) submitGuess(state.matches[state.highlighted].slug);
     else els.inputHint.textContent = "Choose a station from the list.";
   } else if (e.key === "Escape") {
@@ -663,31 +941,42 @@ function onKeyDown(e) {
 /* ----------------------------------------------------------------- boot --- */
 
 async function start() {
-  let data;
+  let stations, schedule, facts;
   try {
-    const res = await fetch("data/stations.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    data = await res.json();
+    [stations, schedule, facts] = await Promise.all([
+      fetch("data/stations.json").then((r) => r.json()),
+      fetch("data/schedule.json").then((r) => r.json()),
+      // Facts are a nicety, not a requirement: a missing file must not stop play.
+      fetch("data/facts.json").then((r) => r.json()).catch(() => ({ facts: {} })),
+    ]);
   } catch (err) {
     els.inputHint.textContent =
-      "Could not load the station list. If you opened this file directly, serve it instead: python3 -m http.server";
+      "Could not load the puzzle data. If you opened this file directly, serve it instead: python3 -m http.server";
     console.error(err);
     return;
   }
 
-  state.lines = data.lines;
-  state.stations = data.stations.map((s) => ({ ...s, search: normalise(s.name) }));
+  state.lines = stations.lines;
+  state.stations = stations.stations.map((s) => ({ ...s, search: normalise(s.name) }));
   state.stations.sort((a, b) => a.name.localeCompare(b.name));
   state.bySlug = new Map(state.stations.map((s) => [s.slug, s]));
+  state.schedule = schedule.schedule;
+  // Day 1 comes from schedule.json so the date and the order it indexes can
+  // never drift apart.
+  state.launch = schedule.launch;
+  state.facts = facts.facts || {};
 
-  state.answer = state.bySlug.get(PUZZLE.slug);
-  if (!state.answer) { els.inputHint.textContent = "Puzzle station not found."; return; }
+  // Before launch day this would be zero or negative; show puzzle 1 instead.
+  state.puzzleNumber = Math.max(1, puzzleNumberFor(state.launch, londonDate()));
+  state.answer = state.bySlug.get(dailySlug());
+  if (!state.answer) { els.inputHint.textContent = "Today's puzzle station is missing from the data."; return; }
 
-  els.puzzleNo.textContent = `Puzzle #${PUZZLE.number}`;
-
-  // Warm the next sharper level so the swap after a wrong guess is instant.
-  const preload = new Image();
-  preload.src = `maps/${state.answer.slug}/2.webp`;
+  // Resume today's game if there is one; yesterday's saved game is ignored.
+  const saved = load(STORE.daily, null);
+  if (saved && saved.n === state.puzzleNumber && Array.isArray(saved.guesses)) {
+    state.guesses = saved.guesses.filter((slug) => state.bySlug.has(slug));
+    state.status = saved.status === "won" || saved.status === "lost" ? saved.status : "playing";
+  }
 
   els.input.addEventListener("input", onInput);
   els.input.addEventListener("keydown", onKeyDown);

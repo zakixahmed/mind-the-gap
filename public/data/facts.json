@@ -1,0 +1,25 @@
+{
+ "_comment": "One fact per station, shown on the win/lose screen. Only stations with a fact we are confident of appear here; the game composes a factual fallback from the station's own zone, lines and borough for everything else, so this file can grow gradually and never shows an invented claim.",
+ "facts": {
+  "baker-street": "Baker Street opened in 1863 on the Metropolitan Railway, the world's first underground railway — its platforms are among the oldest still in use anywhere. The Sherlock Holmes silhouettes tiled along the walls were added in 1979.",
+  "waterloo": "The Waterloo & City line starts here and has exactly two stations. It connects to no other part of the Underground, so its trains have to be lowered into the tunnels through a shaft by crane.",
+  "westminster": "The station was rebuilt in the 1990s for the Jubilee line extension, dropping a deep concrete box beneath Portcullis House. The escalators run through a lattice of exposed steel props that hold the walls apart.",
+  "kings-cross-st-pancras": "Six lines meet here, more than at any other station on the Underground, which makes it the network's busiest interchange.",
+  "bank": "Bank and Monument are one station with two names, linked by tunnels and a long moving walkway. The layout is so tangled that it is often cited as the most confusing on the network.",
+  "angel": "Angel has the longest escalator on the Underground, a 60-metre climb with a vertical rise of about 27 metres.",
+  "hampstead": "Hampstead is the deepest station on the Underground relative to the surface, its platforms sitting some 58 metres below ground — a consequence of being dug under a hill.",
+  "amersham": "Amersham is the highest station on the Underground above sea level, at about 150 metres, and marks the far north-western end of the Metropolitan line.",
+  "chesham": "Chesham is the furthest station from central London on the entire network, roughly 40 km out, and sits at the end of a single-track branch.",
+  "morden": "Morden is the southernmost station on the Underground and, for decades, the busiest of the Northern line's termini.",
+  "upminster": "Upminster is the easternmost station on the Underground, and the District line's outer terminus.",
+  "cockfosters": "Cockfosters is the northern end of the Piccadilly line, opened in 1933 with a soaring concrete train shed by Charles Holden.",
+  "epping": "Epping is the eastern end of the Central line. Until 1994 the track carried on to Ongar, and that stretch now runs as a heritage railway.",
+  "canary-wharf": "The Jubilee line station sits in a drained dock, its glass canopy rising out of the water above a hall long enough to fit One Canada Square lying on its side.",
+  "piccadilly-circus": "The ticket hall is a complete circle beneath the road junction, rebuilt in 1928 when the original surface building could no longer cope with the crowds.",
+  "st-johns-wood": "St John's Wood is the only station on the Underground whose name contains none of the letters in the word \"mackerel\".",
+  "wembley-park": "Wembley Park was built to serve crowds heading for the stadium, and its platforms and passages were rebuilt in the 2000s to move tens of thousands of people in a matter of minutes.",
+  "brixton": "Brixton is the southern terminus of the Victoria line, and one of the few Underground stations where every train on the line begins or ends its journey.",
+  "heathrow-terminal-4": "The Piccadilly line runs a single-track loop around the Heathrow terminals, so trains serving Terminal 4 travel in one direction only and come back round.",
+  "aldgate": "Aldgate sits on the edge of the City, and the ground beneath part of the station is a plague pit from the 1665 outbreak."
+ }
+}

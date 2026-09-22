@@ -4,6 +4,30 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-22 — Session 3 (continued): Phase 5, daily logic and practice mode
+
+**Review changes first**
+- Blur softened from `[36, 20, 10, 5, 2, 0]` to `[13, 8, 4.5, 2.5, 1, 0]` and all 272 stations re-rendered (ADR-009 revised). The original made the first two of six guesses effectively unplayable.
+- Puzzle model changed from daily-only to a shared daily plus unlimited practice rounds (ADR-013). Pure endless was considered and rejected: it would make the share grid pointless and streaks meaningless.
+
+**Built**
+- `scripts/build_schedule.py` → `data/schedule.json`: 100 days, 58 famous and 42 obscure, never three obscure in a row, opening on Waterloo, Westminster and London Bridge. The famous/obscure judgement is an editable list at the top of the script, and `--check` validates a schedule without rewriting it.
+- Date seeding, share grid, localStorage stats with resume, countdown, and practice mode in `index.html` (ADR-013, ADR-014).
+- `public/data/facts.json` with 20 facts, plus a fallback sentence composed from the station's own zone, borough and lines, so nothing is ever invented (ADR-015).
+
+**Broke**
+- The element cache derived property names from element ids, turning `guess-input` into `guessInput` while the code called `els.input` — so every listener silently attached to `undefined` and no guess could be submitted. Replaced with an explicit map that logs a missing element loudly.
+- The PRACTICE badge showed on the daily screen: its CSS `display: inline-block` beats the browser's built-in `[hidden]` rule, so toggling the attribute did nothing. Fixed globally with `[hidden] { display: none !important; }`.
+- A slug typo in the famous list (`heathrow-terminals-2-3` for `heathrow-terminals-2-and-3`) was caught by the script's own warning, which is exactly why it prints one.
+- The first schedule opened on Pimlico and Morden — well-known, but a poor advertisement. Added a marquee list the opening days are drawn from.
+
+**Verified**
+- Driven headlessly at 375 px and 1280 px: a daily win records stats once and only once (a reload resumes the finished game without double-counting), the share text and emoji grid are correct, practice rounds leave stats untouched and return cleanly to the daily, and the console stays clean.
+- Date maths checked in the browser across both 2026 DST transitions and a year boundary: two calendar days apart reads as exactly 2 in every case.
+
+**Next**
+- Phase 6: polish and playtest — walk through as a first-time player on a phone, list every friction point, fix them, then add the how-to-play modal, light mode toggle and footer attribution.
+
 ## 2026-09-22 — Session 3: Phase 4, the game UI
 
 **Built**

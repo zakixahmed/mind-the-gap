@@ -75,16 +75,40 @@ name, and the attribution strings. One station record looks like:
   Piccadilly)` and `Hammersmith (Hammersmith & City)`, `Paddington` and
   `Paddington (Hammersmith & City)`.
 
-## Date seeding _(pending — phase 5)_
+## Date seeding
 
-Planned logic, to be confirmed when implemented:
+1. `londonDate()` formats the current instant as a London calendar date
+   (`YYYY-MM-DD`) using `Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"})`.
+2. `daysBetween()` subtracts two `Date.UTC(...)` values built from those date
+   parts, so the arithmetic compares calendar days and never meets a DST
+   transition.
+3. `puzzleNumber = daysBetween(launch, today) + 1`, clamped to a minimum of 1
+   so the game shows puzzle 1 rather than a negative number before launch day.
+4. `slug = schedule[(puzzleNumber - 1) % schedule.length]`.
 
-1. Fix a launch date constant, e.g. `LAUNCH = 2026-10-01` (London local date).
-2. `puzzleNumber = floor((todayLondonMidnight − LAUNCH) / 86 400 000)`.
-3. `slug = schedule[puzzleNumber % schedule.length]`.
-4. "Today" is computed in the `Europe/London` timezone so a player in another timezone still gets the same puzzle as everyone else on the same London day.
+The launch date lives in `schedule.json`, not in the JavaScript, so the date
+and the order it indexes cannot drift apart. The schedule is 100 days and
+wraps — a known limitation, and the point at which it should be extended.
 
-Edge cases to handle: BST/GMT switches (use `Intl.DateTimeFormat` with `timeZone: 'Europe/London'` rather than raw `Date` arithmetic), and a schedule shorter than the day count (wrap with modulo, and log it as a known limitation until the schedule is extended).
+The countdown to the next puzzle finds the exact instant the London date
+changes by **bisecting over UTC milliseconds** rather than adding 24 hours:
+on the two nights a year when the clocks change, "tomorrow midnight" is 23 or
+25 hours away, and every offset-arithmetic version of this is wrong twice a
+year. See ADR-014.
+
+## Modes
+
+`state.mode` is `daily` or `practice`.
+
+**Daily** is the shared puzzle: it counts towards stats, is shareable, and is
+saved to `localStorage` under `mtg:daily` so a reload resumes mid-game. Stats
+fold in exactly once, guarded by `stats.lastPlayed === puzzleNumber`, so
+reloading a finished game cannot double-count it.
+
+**Practice** draws a random station, avoiding the day's answer and the last 30
+practice stations (`mtg:recent`). It touches no stats, offers no share button,
+and keeps the finished daily game in memory so "Back to today's puzzle"
+restores it. See ADR-013.
 
 ## Map rendering
 
@@ -115,11 +139,29 @@ One hint per wrong guess, always in this order: zone → line(s) → borough →
 
 ## Share grid
 
-Per guess: 🟩 correct, 🟨 same line as the answer **or** an adjacent station on any line, ⬛ otherwise. Adjacency comes from the `adjacent` list in each station record (see above), so both halves of the rule are cheap to evaluate client-side.
+Per guess: 🟩 correct, 🟨 same line as the answer **or** an adjacent station on
+any line, ⬛ otherwise. Adjacency comes from the `adjacent` list in each station
+record, so both halves of the rule are cheap to evaluate client-side. The same
+`verdict()` function colours the guess rows in the UI, so the grid a player
+shares always matches what they saw.
+
+Sharing uses the Web Share API where it exists (mostly mobile), falls back to
+the clipboard, and falls back again to a selectable textarea. A cancelled share
+is silent, not an error.
 
 ## State stored in the browser
 
-`localStorage` only: stats (played, wins, current streak, max streak, guess distribution), today's in-progress guesses keyed by puzzle number, whether the how-to-play modal has been seen, and the theme choice. Nothing leaves the device.
+`localStorage` only, under three keys:
+
+| Key | Holds |
+|-----|-------|
+| `mtg:stats` | played, wins, current streak, max streak, last puzzle counted, guess distribution |
+| `mtg:daily` | today's puzzle number, guesses so far, status — so a reload resumes |
+| `mtg:recent` | the last 30 practice stations, so practice rounds don't repeat |
+
+Every read and write is wrapped: `localStorage` throws in private windows on
+some browsers, and a corrupt value must never stop the game loading. Nothing
+leaves the device — there is no server to send it to.
 
 ## Future hooks (not built)
 

@@ -15,7 +15,9 @@ Think Wordle meets Worldle, for London.
 3. A wrong guess sharpens the map one level and reveals the next hint, in this order: **zone → line(s) → borough → first letter → number of letters**.
 4. You have six guesses. Guess it and share your emoji grid:
    🟩 correct · 🟨 same line or an adjacent station · ⬛ wrong.
-5. A new puzzle unlocks at midnight (London time).
+5. A new puzzle unlocks at midnight (London time) — the same one for everyone.
+6. Want more? Practice rounds are unlimited and draw from all 272 stations.
+   They don't count towards your streak.
 
 ## Running locally
 
@@ -39,6 +41,7 @@ pip install -r requirements.txt
 
 python scripts/build_stations.py   # → data/stations.json       (~5 min, see below)
 python scripts/render_maps.py      # → public/maps/<slug>/1-6.webp
+python scripts/build_schedule.py   # → data/schedule.json       (instant, offline)
 ```
 
 **`render_maps.py`** fetches the raw OpenStreetMap features around each station
@@ -50,6 +53,13 @@ Overpass queries; the public instances are often busy, so it retries across
 three mirrors, skips anything it cannot fetch, and lists the failures at the end
 — run it again to fill the gaps. Budget an hour or more, and run it in the
 background: `nohup python scripts/render_maps.py > render.log 2>&1 &`.
+
+**`build_schedule.py`** writes the 100-day order the daily puzzle follows,
+mixing famous and obscure stations with never three obscure in a row. Which
+stations count as "famous" is an editable list at the top of the script rather
+than a hidden constant; `--check` validates the existing schedule without
+rewriting it. The launch date lives in `schedule.json` so the game and the
+schedule cannot disagree about which day is puzzle #1.
 
 **`build_stations.py`** pulls the 11 Underground lines, their stations and route
 sequences from the TfL Unified API (34 requests), then reverse-geocodes each
@@ -73,7 +83,7 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 | Station data | TfL Unified API + Nominatim for boroughs | Authoritative zones, lines and route order; OSM has none of those. See ADR-005 |
 | Map imagery | Drawn from raw OSM data via Overpass, not tiles | Tile licences forbid bulk pre-rendering, and tiles show station names. See ADR-008 |
 | Blur method | Gaussian `[36, 20, 10, 5, 2, 0]`, stored as WebP | Non-linear so guess 3 is the turning point; WebP keeps the set at 16 MB. See ADR-009, ADR-010 |
-| Daily seeding | Days since a fixed launch date → index into `data/schedule.json` | No server, identical for everyone |
+| Daily seeding | London calendar-date arithmetic → index into `data/schedule.json` | No server, identical for everyone, correct across DST. See ADR-014 |
 | Hosting | GitHub Pages from `public/` | Free, static, relative paths only |
 
 ## Licence and attribution
@@ -88,10 +98,12 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 - [x] Phase 2 — station dataset (`data/stations.json`)
 - [x] Phase 3 — map rendering, six blur levels per station
 - [x] Phase 4 — game UI with one hardcoded puzzle
-- [ ] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule
+- [x] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule, practice mode
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
 - [ ] Phase 7 — deployment, real screenshots, `v0.1.0`
 
 **Later, not in MVP:** archive mode for past puzzles, hard mode, distance-and-direction feedback on wrong guesses.
+
+**Known limitation:** the schedule is 100 days and then repeats. Extending it is a matter of raising `LENGTH` in `build_schedule.py` and re-running.
 
 **Deliberately out of scope:** accounts, leaderboards, multiplayer, user-generated puzzles, monetisation, any server.

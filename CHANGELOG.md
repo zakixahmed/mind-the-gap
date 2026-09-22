@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Daily puzzle seeding from the London calendar date, with a curated 100-day schedule (`scripts/build_schedule.py` → `data/schedule.json`).
+- Emoji share grid with the Web Share API on mobile and a clipboard fallback.
+- Local stats: games played, win %, current and max streak, guess distribution — plus resume-on-reload for an in-progress daily game.
+- Countdown to the next puzzle.
+- Unlimited practice rounds, which don't affect stats.
+- `public/data/facts.json` — one fact per station where we have a reliable one, with a fallback composed from the station's own record.
+
 ### Changed
 - Softened the blur curve to `[13, 8, 4.5, 2.5, 1, 0]` after playtesting: the original made the first two guesses unplayable. Full set re-rendered, 20.7 MB.
 

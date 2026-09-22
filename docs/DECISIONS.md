@@ -107,3 +107,17 @@ Template:
 - Context: The brief rules out free-text entry to avoid spelling disputes. The obvious implementation — match the typed string against the station list on submit — still lets a player type `Tottenham Court Rd` and be told they are wrong.
 - Decision: The input is a combobox over the station list. Enter commits only the currently highlighted suggestion; with nothing highlighted it does nothing but prompt. Matching folds case, accents and punctuation, so `st johns wood`, `King's Cross` and `kings cross` all find their station.
 - Consequences: There is no code path that can reject a guess for spelling, because there is no path that accepts a string. The cost is that a player must always pick from the list, which is also what makes the game feel fair.
+
+## ADR-014: Date seeding compares calendar dates, never elapsed time
+- Date: 2026-09-22
+- Status: Accepted
+- Context: The puzzle number is "days since launch, in London". The tempting implementations — subtracting timestamps and dividing by 86,400,000, or adding 24 hours to find the next puzzle — are both wrong twice a year, when a London day is 23 or 25 hours long, and wrong all year for players outside the UK.
+- Decision: Format "now" as a London calendar date with `Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"})`, which yields `YYYY-MM-DD`, then subtract two `Date.UTC(...)` values built from those date parts. That compares calendar days as calendar days and never meets a DST transition. The countdown to the next puzzle finds the exact instant the London date changes by bisecting over UTC milliseconds — about sixteen iterations, and correct on clock-change nights.
+- Consequences: A player in Sydney gets the same puzzle as a player in Southwark on the same London day, which is the point. Verified in the browser across both 2026 DST transitions and a year boundary.
+
+## ADR-015: Facts are optional, and the fallback is generated from the station record
+- Date: 2026-09-22
+- Status: Accepted
+- Context: The win screen shows "one interesting fact". Writing 272 of them — or even 100 — is a large content job, and a half-remembered fact confidently displayed is worse than none.
+- Decision: `public/data/facts.json` holds only facts we are confident of (20 at the time of writing). For every other station the game composes a sentence from the station's own record: zone, borough and lines. The file can grow over time and the game never shows an invented claim.
+- Consequences: Every station has something to show from day one, and nothing in the game asserts anything the data does not support. Adding a fact is a one-line edit with no code change.
