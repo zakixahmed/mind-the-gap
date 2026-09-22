@@ -4,6 +4,27 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-22 — Session 3: Phase 4, the game UI
+
+**Built**
+- `public/index.html` (~700 lines, one file, no framework or build step): the complete core loop against one hardcoded puzzle (Baker Street). Progressive blur tied to guess count, station autocomplete, six guesses, the five-rung hint ladder, and a win/lose screen with the fact and an OpenStreetMap link. Dark theme throughout, laid out mobile-first.
+- `scripts/build_stations.py` now also writes `public/data/stations.json` — trimmed to the eight fields the browser needs and minified to 50 KB — so `public/` is deployable on its own (ADR-011).
+- Guess verdicts implement the share-grid rule (correct / shares a line or one stop away / neither), so phase 5's emoji grid can reuse the function unchanged.
+- ADR-011 and ADR-012 logged; ARCHITECTURE now documents the front end.
+
+**Broke**
+- The first mobile layout put the search box below the fold on a 375 px screen: a full-width square map plus six empty guess rows ran past the viewport, so a first-time player landed on a page with nothing to type into. Fixed by capping the map at `52vh` and drawing only the guesses actually made plus one slim placeholder.
+- On desktop the suggestion list opened upward and covered the map — exactly the thing the player needs while choosing. It now opens upward only on phones, where the on-screen keyboard covers everything below the input.
+- Line chips used white text on every colour, which is close to unreadable on Circle yellow and Hammersmith & City pink. Chip text colour is now derived from the background's relative luminance rather than a hand-maintained list.
+
+**Verified**
+- Driven headlessly with Playwright at 375 px and 1280 px: a winning run, a losing run and the autocomplete, checking the blur advances to the right level, the hints appear in the right order, verdicts are right, the end screen renders and the console stays clean.
+
+**Next**
+- Phase 5: date seeding (days since launch → `data/schedule.json`), the emoji share grid, localStorage stats, the countdown, and a curated 100-day schedule mixing famous and obscure stations with no three obscure ones in a row.
+
+---
+
 ## 2026-09-20 to 2026-09-22 — Session 2: Phase 3, map rendering (complete)
 
 **Built**

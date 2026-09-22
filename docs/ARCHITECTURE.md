@@ -26,8 +26,10 @@ The deployed site is `public/` and nothing else. No server, no API calls, no bui
 ├── public/               everything that gets deployed (GitHub Pages root)
 │   ├── index.html        the whole game: markup, CSS and JS inline
 │   └── maps/<slug>/      1.webp … 6.webp, most blurred to sharpest
+├── public/data/
+│   └── stations.json     trimmed, minified copy the browser fetches
 ├── data/
-│   ├── stations.json     one record per station: name, slug, lat, lon, zones, lines, borough
+│   ├── stations.json     canonical: name, slug, naptan, lat, lon, zones, lines, borough, adjacent
 │   └── schedule.json     ordered list of slugs — puzzle N shows schedule[N]
 ├── scripts/
 │   ├── build_stations.py fetches and normalises station data
@@ -36,7 +38,11 @@ The deployed site is `public/` and nothing else. No server, no API calls, no bui
 └── requirements.txt      pipeline dependencies only
 ```
 
-Note: `public/` needs read access to `data/*.json`. How that is done (copy at build time vs. symlink vs. keeping data inside `public/`) is decided in phase 4 and recorded here.
+`public/` is self-contained: `scripts/build_stations.py` writes a second,
+trimmed copy of the station list to `public/data/stations.json` (50 KB minified,
+naptan ids and build metadata removed). `data/stations.json` stays the
+canonical, readable, fully-annotated version. Deploying means copying `public/`
+and nothing else.
 
 ## Station data (`data/stations.json`)
 
@@ -120,3 +126,47 @@ Per guess: 🟩 correct, 🟨 same line as the answer **or** an adjacent station
 - **Archive mode:** everything is keyed by puzzle number, so playing puzzle N is a matter of passing N instead of computing it from the date.
 - **Hard mode:** a flag that skips the hint ladder.
 - **Distance and direction:** `lat`/`lon` are already in `stations.json`, so a bearing and distance can be computed client-side.
+
+
+## The front end (`public/index.html`)
+
+One file, no framework, no build step (ADR-002). Markup, CSS and JS in three
+clearly banded sections, about 700 lines in total.
+
+**State** is a single `state` object: the station list, the answer, the guesses
+made, and a status of `playing` / `won` / `lost`. Every render function reads
+from it and rewrites its own piece of the DOM; there is no partial-update logic
+to get wrong at this size.
+
+**Blur level** is `min(guesses.length + 1, 6)` while playing, and 6 once the
+game ends — so guess 1 sees level 1, and the answer is always revealed sharp.
+The swap fades out, waits for the new file to decode, then fades in; without
+that wait the sharper level appears half-loaded and reads as a glitch. Level 2
+is preloaded at start-up so the first wrong guess feels instant.
+
+**Hints** come from `HINT_LADDER`, an ordered array of `{label, render}`. Hint
+*n* is revealed after wrong guess *n*, so the five hints cover guesses 1-5.
+Adding or reordering hints means editing that one array.
+
+**Autocomplete** matches on a normalised form of each name — case, accents and
+punctuation folded — so `st johns` finds `St. John's Wood`. Names starting with
+the query rank above names merely containing it, stations already guessed are
+filtered out, and Enter only ever commits a *highlighted suggestion*: raw text
+can never be submitted, which is what keeps spelling out of the game.
+
+**Guess verdicts** use the share-grid rule from the brief — correct, or shares
+a line / is one stop away, or neither — computed from `lines` and `adjacent` in
+the station record. Phase 5's emoji grid reuses this function unchanged.
+
+**Line colours** are the official TfL palette. Chip text colour is derived from
+each background's relative luminance rather than hardcoded, because several
+lines (Circle, Hammersmith & City, Jubilee, Waterloo & City) are too pale for
+white text.
+
+**Layout** is mobile-first and deliberately capped: the map is square but never
+taller than `52vh`, and only the guesses actually made are drawn. An early
+version rendered all six guess rows up front, which pushed the search box below
+the fold on a 375 px phone — the one thing that must never happen. The
+suggestion list opens upward on phones (the keyboard covers everything below
+the input) and downward on wider screens (where opening upward would cover the
+map).

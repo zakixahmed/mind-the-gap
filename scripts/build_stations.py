@@ -41,6 +41,11 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 OUT_FILE = ROOT / "data" / "stations.json"
+# The deployed site is public/ alone, so the game needs its own copy of the
+# station list. It is trimmed: naptan ids and build metadata are of no use to
+# the browser, and every byte here is on the critical path of a first load.
+PUBLIC_FILE = ROOT / "public" / "data" / "stations.json"
+PUBLIC_FIELDS = ("name", "slug", "lat", "lon", "zones", "lines", "borough", "adjacent")
 
 TFL_BASE = "https://api.tfl.gov.uk"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
@@ -336,6 +341,18 @@ def validate(dataset: dict) -> None:
         sys.exit(1)
 
 
+def write_public_copy(dataset: dict) -> None:
+    """Write the trimmed, minified station list the browser actually loads."""
+    public = {
+        "lines": dataset["meta"]["lines"],
+        "stations": [{k: s[k] for k in PUBLIC_FIELDS} for s in dataset["stations"]],
+    }
+    PUBLIC_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PUBLIC_FILE.write_text(json.dumps(public, separators=(",", ":"), ensure_ascii=False))
+    size_kb = PUBLIC_FILE.stat().st_size / 1024
+    print(f"wrote {PUBLIC_FILE.relative_to(ROOT)} ({size_kb:.0f} KB, minified)")
+
+
 def main() -> None:
     """Parse flags, build, validate, write, and print a spot-check sample."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -348,6 +365,7 @@ def main() -> None:
         validate(dataset)
     OUT_FILE.write_text(json.dumps(dataset, indent=1, ensure_ascii=False) + "\n")
     print(f"\nwrote {OUT_FILE.relative_to(ROOT)} with {dataset['meta']['count']} stations")
+    write_public_copy(dataset)
 
     # Five fixed spot-checks spanning zones, line counts and the edge of the network.
     print("\nSpot-check against https://tfl.gov.uk/tube/stop/<naptan>/<slug>:")

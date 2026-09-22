@@ -27,7 +27,8 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Nothing to install for the game itself. The Python environment below is only needed to regenerate data or map images.
+A server is required, not optional: the game fetches `data/stations.json`, and
+browsers block that over `file://`. Nothing to install for the game itself. The Python environment below is only needed to regenerate data or map images.
 
 ## Regenerating the map data
 
@@ -86,7 +87,7 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 - [x] Phase 1 — scaffold and docs skeleton
 - [x] Phase 2 — station dataset (`data/stations.json`)
 - [x] Phase 3 — map rendering, six blur levels per station
-- [ ] Phase 4 — game UI with one hardcoded puzzle
+- [x] Phase 4 — game UI with one hardcoded puzzle
 - [ ] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
 - [ ] Phase 7 — deployment, real screenshots, `v0.1.0`

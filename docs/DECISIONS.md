@@ -84,3 +84,17 @@ Template:
 - Context: The brief specified `public/maps/<slug>/1.png … 6.png`. Measured on the densest station, a palette-quantised PNG at 640 px was about 150 KB, putting the full set near 95 MB — well past the 50 MB threshold in ADR-003, which would have forced the maps out of the repository and into a build step.
 - Decision: WebP at quality 80. The same image is about 41 KB; the full set is 15.9 MB (60 KB per station).
 - Consequences: The repo stays self-contained and GitHub Pages serves the images directly, with no CI render step. WebP is supported by every browser released in the last several years, which is an acceptable floor for a hobby puzzle game. Changing back is a one-line edit plus a re-render from cache.
+
+## ADR-011: `public/` carries its own trimmed copy of the station data
+- Date: 2026-09-22
+- Status: Accepted
+- Context: The deploy target is the `public/` folder alone, but the canonical station list lives in `data/`. Options were a build-time copy, a symlink (which GitHub Pages will not follow), or moving the data into `public/` entirely.
+- Decision: `scripts/build_stations.py` writes both — `data/stations.json` (canonical, indented, every field including naptan ids and build metadata) and `public/data/stations.json` (minified, only the eight fields the browser uses, 50 KB).
+- Consequences: `public/` can be deployed as-is with nothing else alongside it, and the file the player downloads carries no dead weight. The cost is two files that must not drift; they are written by the same function in the same run, so they cannot.
+
+## ADR-012: Enter never submits free text
+- Date: 2026-09-22
+- Status: Accepted
+- Context: The brief rules out free-text entry to avoid spelling disputes. The obvious implementation — match the typed string against the station list on submit — still lets a player type `Tottenham Court Rd` and be told they are wrong.
+- Decision: The input is a combobox over the station list. Enter commits only the currently highlighted suggestion; with nothing highlighted it does nothing but prompt. Matching folds case, accents and punctuation, so `st johns wood`, `King's Cross` and `kings cross` all find their station.
+- Consequences: There is no code path that can reject a guess for spelling, because there is no path that accepts a string. The cost is that a player must always pick from the list, which is also what makes the game feel fair.

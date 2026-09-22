@@ -76,6 +76,20 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-22 — after session 3 (phase 4 complete)
+
+**Done**
+- Phase 4 complete: `public/index.html` runs the full core loop against one hardcoded puzzle (Baker Street). Verified headlessly at 375 px and 1280 px; screenshots reviewed. ADR-011 (public data copy) and ADR-012 (no free text) logged.
+
+**Next — start here**
+- Phase 5: daily logic, share grid, stats, countdown.
+  1. `data/schedule.json` — a curated 100-day order, famous and obscure mixed, never three obscure in a row. Needs a judgement call on which of the 272 count as "famous"; propose the list before building it.
+  2. Date seeding in `index.html`: puzzle number = days since a fixed launch date, computed in `Europe/London` via `Intl.DateTimeFormat` rather than raw `Date` arithmetic, so BST/GMT and other timezones don't shift the puzzle.
+  3. Emoji share grid (🟩 correct, 🟨 same line or adjacent, ⬛ wrong) + Web Share API on mobile. The `verdict()` function in index.html already computes exactly this.
+  4. localStorage: stats (played, wins, streak, max streak, distribution) and resume-in-progress. All the TODO(p5) markers in index.html point at the right places.
+  5. Countdown to the next puzzle.
+- Also needed: a fact per station for the 100 scheduled puzzles. Currently one inline fact for Baker Street; phase 5 moves these to `public/data/facts.json`.
+
 ### 2026-09-22 — after session 2 (phase 3 complete)
 
 **Done**
