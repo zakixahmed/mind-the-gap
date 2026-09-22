@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `public/data/facts.json` — one fact per station where we have a reliable one, with a fallback composed from the station's own record.
 
 ### Changed
+- The station picker now opens the full browsable list on tap, instead of only appearing once you type.
 - Softened the blur curve to `[13, 8, 4.5, 2.5, 1, 0]` after playtesting: the original made the first two guesses unplayable. Full set re-rendered, 20.7 MB.
 
 ### Added

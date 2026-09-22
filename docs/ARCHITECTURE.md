@@ -190,11 +190,14 @@ is preloaded at start-up so the first wrong guess feels instant.
 *n* is revealed after wrong guess *n*, so the five hints cover guesses 1-5.
 Adding or reordering hints means editing that one array.
 
-**Autocomplete** matches on a normalised form of each name — case, accents and
+**The station picker** is both a browser and a search box: tapping it opens all
+272 stations, and typing filters them. It matches on a normalised form of each name — case, accents and
 punctuation folded — so `st johns` finds `St. John's Wood`. Names starting with
 the query rank above names merely containing it, stations already guessed are
 filtered out, and Enter only ever commits a *highlighted suggestion*: raw text
-can never be submitted, which is what keeps spelling out of the game.
+can never be submitted, which is what keeps spelling out of the game. While the
+full list is open with nothing typed, nothing is pre-highlighted, so a stray
+Enter cannot spend a guess (ADR-016).
 
 **Guess verdicts** use the share-grid rule from the brief — correct, or shares
 a line / is one stop away, or neither — computed from `lines` and `adjacent` in

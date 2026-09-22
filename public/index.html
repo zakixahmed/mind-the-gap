@@ -244,8 +244,9 @@ h1 .bar {                      /* the roundel-ish bar through the title */
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow);
-  max-height: 260px;
+  max-height: min(320px, 45vh);
   overflow-y: auto;
+  overscroll-behavior: contain;   /* scrolling the list shouldn't scroll the page */
   z-index: 20;
   padding: 4px;
   margin: 0;
@@ -429,7 +430,7 @@ footer a { color: var(--muted); }
              autocapitalize="off" autocorrect="off" spellcheck="false"
              placeholder="Type a station name…">
     </div>
-    <p class="hint-text" id="input-hint">Pick from the list — you can't enter free text.</p>
+    <p class="hint-text" id="input-hint">Tap to browse all stations, or type to narrow it down.</p>
 
     <section id="endscreen" hidden aria-live="polite"></section>
   </main>
@@ -872,18 +873,24 @@ function dailySlug() {
 
 /* -------------------------------------------------------- autocomplete ---- */
 
+/** Stations to offer for the current query.
+ *
+ *  An empty query returns the whole list rather than nothing, so tapping the
+ *  box opens a browsable list of all 272 stations. Typing filters it: names
+ *  starting with the query rank above names merely containing it.
+ */
 function findMatches(query) {
+  const available = state.stations.filter((s) => !state.guesses.includes(s.slug));
   const q = normalise(query);
-  if (!q) return [];
+  if (!q) return available;
+
   const starts = [], contains = [];
-  for (const s of state.stations) {
-    if (state.guesses.includes(s.slug)) continue;
+  for (const s of available) {
     const idx = s.search.indexOf(q);
     if (idx === 0) starts.push(s);
     else if (idx > 0) contains.push(s);
-    if (starts.length >= 8) break;
   }
-  return starts.concat(contains).slice(0, 8);
+  return starts.concat(contains).slice(0, 10);
 }
 
 function renderSuggestions() {
@@ -906,6 +913,9 @@ function renderSuggestions() {
   els.suggestions.hidden = false;
   els.input.setAttribute("aria-expanded", "true");
   els.input.setAttribute("aria-activedescendant", list[state.highlighted] ? `sugg-${state.highlighted}` : "");
+  // The browse list is 272 rows long, so the highlight has to be scrolled to.
+  const active = els.suggestions.children[state.highlighted];
+  if (active) active.scrollIntoView({ block: "nearest" });
 }
 
 function closeSuggestions() {
@@ -914,9 +924,12 @@ function closeSuggestions() {
   renderSuggestions();
 }
 
-function onInput() {
+function openSuggestions() {
   state.matches = findMatches(els.input.value);
-  state.highlighted = state.matches.length ? 0 : -1;
+  // Pre-highlight the top match only once the player has typed something. With
+  // the full list open, a highlighted first entry would mean a stray Enter
+  // spends one of six guesses on whatever happens to sort first.
+  state.highlighted = (els.input.value.trim() && state.matches.length) ? 0 : -1;
   renderSuggestions();
 }
 
@@ -978,7 +991,9 @@ async function start() {
     state.status = saved.status === "won" || saved.status === "lost" ? saved.status : "playing";
   }
 
-  els.input.addEventListener("input", onInput);
+  els.input.addEventListener("input", openSuggestions);
+  // Tapping the box opens the full list — no dead end for a first-time player.
+  els.input.addEventListener("focus", openSuggestions);
   els.input.addEventListener("keydown", onKeyDown);
   els.input.addEventListener("blur", () => setTimeout(closeSuggestions, 120));
 

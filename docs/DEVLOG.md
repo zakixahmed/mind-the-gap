@@ -25,6 +25,9 @@ One entry per working session, newest at the top. Each entry covers what was bui
 - Driven headlessly at 375 px and 1280 px: a daily win records stats once and only once (a reload resumes the finished game without double-counting), the share text and emoji grid are correct, practice rounds leave stats untouched and return cleanly to the daily, and the console stays clean.
 - Date maths checked in the browser across both 2026 DST transitions and a year boundary: two calendar days apart reads as exactly 2 in every case.
 
+**Review change**
+- The station picker now opens the whole list on tap rather than waiting for typing (ADR-016). Tapping the box and getting nothing back was a dead end for a first-time player. Guarded against the obvious hazard: with the full list open and nothing typed, no entry is pre-highlighted, so a stray Enter cannot burn a guess on Acton Town.
+
 **Next**
 - Phase 6: polish and playtest — walk through as a first-time player on a phone, list every friction point, fix them, then add the how-to-play modal, light mode toggle and footer attribution.
 

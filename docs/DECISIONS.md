@@ -121,3 +121,10 @@ Template:
 - Context: The win screen shows "one interesting fact". Writing 272 of them — or even 100 — is a large content job, and a half-remembered fact confidently displayed is worse than none.
 - Decision: `public/data/facts.json` holds only facts we are confident of (20 at the time of writing). For every other station the game composes a sentence from the station's own record: zone, borough and lines. The file can grow over time and the game never shows an invented claim.
 - Consequences: Every station has something to show from day one, and nothing in the game asserts anything the data does not support. Adding a fact is a one-line edit with no code change.
+
+## ADR-016: The station list opens on tap, and Enter never fires on a browse list
+- Date: 2026-09-22
+- Status: Accepted
+- Context: The autocomplete only appeared once the player typed, so tapping the box did nothing — a dead end for anyone who does not already know a station name, and no way to browse what is available.
+- Decision: An empty query now returns the whole list rather than nothing, so focusing the input opens all 272 stations, scrollable, and typing filters from there. Crucially, the top entry is pre-highlighted **only** once something has been typed: with the full list open and nothing typed, a stray Enter would otherwise spend one of six guesses on whatever sorts first (Acton Town). Arrowing into the list highlights normally, and the highlight is scrolled into view.
+- Consequences: The input works as both a search box and a browsable menu, with one code path. The full list is 272 DOM nodes, built once per open — measurably instant, and far simpler than virtualising a list this size.
