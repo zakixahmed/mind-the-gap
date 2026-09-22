@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The station picker now opens the full browsable list on tap, instead of only appearing once you type.
-- Softened the blur curve to `[13, 8, 4.5, 2.5, 1, 0]` after playtesting: the original made the first two guesses unplayable. Full set re-rendered, 20.7 MB.
+- Softened the blur curve twice after playtesting, ending at `[5, 3.2, 2, 1, 0.4, 0]` with every level stored at full resolution. Full set re-rendered, 31.3 MB.
 
 ### Added
 - The game itself: `public/index.html` — full core loop (progressive blur, station autocomplete, six guesses, hint ladder, win/lose screen) against one hardcoded puzzle. Dark theme, mobile-first, no framework or build step.

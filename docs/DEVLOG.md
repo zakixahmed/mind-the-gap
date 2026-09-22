@@ -25,7 +25,8 @@ One entry per working session, newest at the top. Each entry covers what was bui
 - Driven headlessly at 375 px and 1280 px: a daily win records stats once and only once (a reload resumes the finished game without double-counting), the share text and emoji grid are correct, practice rounds leave stats untouched and return cleanly to the daily, and the console stays clean.
 - Date maths checked in the browser across both 2026 DST transitions and a year boundary: two calendar days apart reads as exactly 2 in every case.
 
-**Review change**
+**Review changes**
+- Blur softened a second time, to `[5, 3.2, 2, 1, 0.4, 0]` with all levels stored at full 640 px. The first revision missed that the radii are defined against a 640 px image while the map is displayed at whatever width the screen allows — on a desktop at ~780 px the blur is amplified by about a fifth, so what looked right in a 375 px test was still heavy in real use. Accepted trade-off: levels 4-6 are now nearly identical, so the late guesses lean on the hint ladder rather than the image.
 - The station picker now opens the whole list on tap rather than waiting for typing (ADR-016). Tapping the box and getting nothing back was a dead end for a first-time player. Guarded against the obvious hazard: with the full list open and nothing typed, no entry is pre-highlighted, so a stray Enter cannot burn a guess on Acton Town.
 
 **Next**

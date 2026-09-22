@@ -63,20 +63,19 @@ AREA_M = 1000          # side of the square drawn around the station, in metres
 SIZE_PX = 640          # side of the output image, in pixels
 SUPERSAMPLE = 2        # draw at 2x then downscale: Pillow has no antialiasing of its own
 
-# Gaussian blur radius (in SIZE_PX pixels) for guesses 1..6. Not linear on
-# purpose: the drop between levels 2 and 3 is what makes guess 3 feel like
-# "I nearly have it", while 4-6 are refinement.
+# Gaussian blur radius (in SIZE_PX pixels) for guesses 1..6.
 #
-# These are the second set. The first, [36, 20, 10, 5, 2, 0], made guess 1 an
-# almost featureless colour wash — it looked striking but gave a player nothing
-# to reason about, so the first two guesses were effectively wasted. See ADR-009.
-BLUR_RADII = [13, 8, 4.5, 2.5, 1, 0]
+# Third set, after two rounds of playtesting. [36, 20, 10, 5, 2, 0] made the
+# first two guesses a featureless wash; [13, 8, 4.5, 2.5, 1, 0] still read as
+# too heavy on a large screen, where the map is displayed wider than the 640 px
+# it was blurred at, which amplifies the effect. These radii keep guess 1
+# recognisable to someone who knows London while leaving street detail soft.
+BLUR_RADII = [5, 3.2, 2, 1, 0.4, 0]
 
-# Pixel size each level is stored at. A blurred image holds no detail finer
-# than its radius, so early levels can be stored smaller and upscaled by the
-# browser with no visible difference. Keep size >= 640/radius * 3 or the
-# downscale, not the blur, becomes what limits the image.
-LEVEL_SIZES = [320, 384, 512, 640, 640, 640]
+# At these radii there is nothing to gain from storing early levels smaller:
+# the downscale, not the blur, would become what limits the image. Full size
+# throughout costs about 30 MB for the whole set, still inside ADR-003.
+LEVEL_SIZES = [640, 640, 640, 640, 640, 640]
 
 # Colours. Light map so it reads inside the dark UI; muted so the blur levels
 # stay legible rather than turning into mud.
