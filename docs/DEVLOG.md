@@ -4,7 +4,7 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
-## 2026-09-20 — Session 2: Phase 3, map rendering (in progress)
+## 2026-09-20 to 2026-09-22 — Session 2: Phase 3, map rendering (complete)
 
 **Built**
 - `scripts/render_maps.py`: fetches raw OpenStreetMap data for a 1 km square per station from the Overpass API, draws a label-free map with Pillow at 2x supersampling, and writes six blur levels. Flags: `--only`, `--offline`, `--contact-sheet`.
@@ -18,9 +18,14 @@ One entry per working session, newest at the top. Each entry covers what was bui
 - Public Overpass instances were heavily loaded all weekend (504s, timeouts). Added two mirrors with rotation on retry.
 - Progress lines were buffered when redirected to a log file, so `tail render.log` showed only errors. Fixed with line buffering.
 
+- The full run took three sessions of wall-clock time spread over two days, entirely because the public Overpass instances were saturated. The render itself is a few minutes of CPU. Five stations needed a second pass; the skip-and-continue behaviour meant that cost one extra command rather than a restart.
+
+**Result**
+- 272 stations, 1,632 images, 15.9 MB (60 KB per station) — well under the 50 MB threshold, so ADR-003 resolves to "commit the maps" and the repository stays self-contained with no CI render step.
+- Spot-checked Richmond, Stockwell, Wanstead, Epping and Canary Wharf: rivers, rail, parks and docks all read clearly at level 6 and are unrecognisable at level 1.
+
 **Next**
-- Finish the full render: 94 of 272 stations are cached and rendered. Re-run `python scripts/render_maps.py` to continue; it resumes from the cache.
-- Then: commit `public/maps/`, confirm the total size against the 50 MB threshold (ADR-003), update README/ARCHITECTURE/CHANGELOG, and move to phase 4 (game UI with one hardcoded puzzle).
+- Phase 4: the game UI with one hardcoded puzzle — full core loop (autocomplete, six guesses, hint ladder, win/lose screen) against a single station, then screenshots at 375 px and 1280 px.
 
 ## 2026-09-12 — Session 1 (continued): Phase 2, station dataset
 

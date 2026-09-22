@@ -76,19 +76,17 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
-### 2026-09-20 — after session 2 (phase 3, part-done)
+### 2026-09-22 — after session 2 (phase 3 complete)
 
 **Done**
-- `scripts/render_maps.py` written, reviewed and committed. Blur curve signed off on five stations. WebP chosen over PNG (ADR-010). Thames/multipolygon stitching, mirror rotation and failure-tolerance all fixed.
-- 94 of 272 stations fetched, cached in `data/raw/` and rendered to `public/maps/<slug>/1-6.webp`.
+- Phase 3 complete. All 272 stations rendered to `public/maps/<slug>/1-6.webp` — 1,632 images, 15.9 MB, committed. ADR-003 resolved (maps stay in the repo), ADR-008/009/010 logged. README, ARCHITECTURE and CHANGELOG updated.
 
 **Next — start here**
-1. In Terminal: `cd ~/Documents/'Portfolio Website '/'Mind the Gap - web game'` then `source .venv/bin/activate` then `nohup python scripts/render_maps.py > render.log 2>&1 &`. It resumes from the cache at station 95. Check with `tail -3 render.log`. Re-run if it ends with a FAILED line.
-2. Commit `public/maps/`, check the total against the 50 MB threshold (ADR-003 is still *Proposed* pending this number), update README/ARCHITECTURE/CHANGELOG, close out phase 3.
-3. Phase 4: game UI with one hardcoded puzzle; screenshots at 375 px and 1280 px.
+- Phase 4: the game UI. A single `public/index.html` with inline CSS and JS, running the full core loop against **one hardcoded station** — blurred image that sharpens per guess, autocomplete over `data/stations.json`, six guesses, the hint ladder (zone → lines → borough → first letter → letter count), win/lose screen with the OpenStreetMap link. No daily logic, share grid or stats yet; those are phase 5. Finish with screenshots at 375 px and 1280 px for review.
+- Decide early in phase 4 how `public/` reads `data/stations.json` (copy at build time, or move the data under `public/`) — flagged in ARCHITECTURE as an open question.
 
 **Open questions / notes for next session**
-- Public Overpass instances have been slow and flaky; the renderer tolerates it but the full run takes an hour or more. Keep the Mac awake.
+- No more network-dependent scripts are needed from here on: phases 4-7 are front-end work, which Claude can do directly in the folder.
 - Network: api.tfl.gov.uk and openstreetmap.org are blocked from Claude's shells, so anything needing the network runs in Zack's own Terminal.
 - Delete permission on the folder must be granted each session so git can remove its lock files.
 

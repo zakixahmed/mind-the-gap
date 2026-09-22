@@ -37,8 +37,18 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 python scripts/build_stations.py   # → data/stations.json       (~5 min, see below)
-python scripts/render_maps.py      # → public/maps/<slug>/1-6.png (phase 3)
+python scripts/render_maps.py      # → public/maps/<slug>/1-6.webp
 ```
+
+**`render_maps.py`** fetches the raw OpenStreetMap features around each station
+from the Overpass API and draws a label-free map, then writes six blur levels as
+WebP. Responses cache to `data/raw/` so re-tuning the cartography needs no
+network: `--offline` re-renders from cache, `--only slug,slug` does a few
+stations, `--contact-sheet` writes a 6-up review image. A full run is 272
+Overpass queries; the public instances are often busy, so it retries across
+three mirrors, skips anything it cannot fetch, and lists the failures at the end
+— run it again to fill the gaps. Budget an hour or more, and run it in the
+background: `nohup python scripts/render_maps.py > render.log 2>&1 &`.
 
 **`build_stations.py`** pulls the 11 Underground lines, their stations and route
 sequences from the TfL Unified API (34 requests), then reverse-geocodes each
@@ -60,8 +70,8 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 | Front end | Single `public/index.html`, no framework, no build step | Small enough to read in one sitting; deploys anywhere |
 | Data pipeline | Python 3 scripts in `scripts/` | Run once, commit the output; the game never calls an API |
 | Station data | TfL Unified API + Nominatim for boroughs | Authoritative zones, lines and route order; OSM has none of those. See ADR-005 |
-| Map tiles | _decided in phase 3_ | |
-| Blur method | _decided in phase 3_ | |
+| Map imagery | Drawn from raw OSM data via Overpass, not tiles | Tile licences forbid bulk pre-rendering, and tiles show station names. See ADR-008 |
+| Blur method | Gaussian `[36, 20, 10, 5, 2, 0]`, stored as WebP | Non-linear so guess 3 is the turning point; WebP keeps the set at 16 MB. See ADR-009, ADR-010 |
 | Daily seeding | Days since a fixed launch date → index into `data/schedule.json` | No server, identical for everyone |
 | Hosting | GitHub Pages from `public/` | Free, static, relative paths only |
 
@@ -69,13 +79,13 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 
 - **Code:** [MIT](LICENSE).
 - **Station data:** [TfL Unified API](https://api.tfl.gov.uk) under the [TfL open data licence](https://tfl.gov.uk/info-for/open-data-users/) — *Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights 2019.* Boroughs from [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim — *© OpenStreetMap contributors, ODbL 1.0.*
-- **Map tiles:** _source and licence recorded in phase 3; attribution also appears in the app footer._
+- **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data retrieved via the [Overpass API](https://overpass-api.de) — *© OpenStreetMap contributors*, ODbL. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
 
 ## Roadmap
 
 - [x] Phase 1 — scaffold and docs skeleton
 - [x] Phase 2 — station dataset (`data/stations.json`)
-- [ ] Phase 3 — map rendering, six blur levels per station
+- [x] Phase 3 — map rendering, six blur levels per station
 - [ ] Phase 4 — game UI with one hardcoded puzzle
 - [ ] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution

@@ -13,7 +13,7 @@ Two halves that never talk to each other at runtime:
   │   TfL / OSM  ──►  data/stations.json ─────────►│   loads stations.json            │
   │                                  │             │   picks today's slug from        │
   │ scripts/render_maps.py           │             │   data/schedule.json             │
-  │   tiles ──► public/maps/<slug>/1..6.png ──────►│   shows maps/<slug>/<n>.png      │
+  │   OSM data ──► public/maps/<slug>/1..6.webp ──►│   shows maps/<slug>/<n>.webp    │
   └──────────────────────────────────┘             └──────────────────────────────────┘
 ```
 
@@ -25,7 +25,7 @@ The deployed site is `public/` and nothing else. No server, no API calls, no bui
 .
 ├── public/               everything that gets deployed (GitHub Pages root)
 │   ├── index.html        the whole game: markup, CSS and JS inline
-│   └── maps/<slug>/      1.png … 6.png, most blurred to sharpest
+│   └── maps/<slug>/      1.webp … 6.webp, most blurred to sharpest
 ├── data/
 │   ├── stations.json     one record per station: name, slug, lat, lon, zones, lines, borough
 │   └── schedule.json     ordered list of slugs — puzzle N shows schedule[N]
@@ -80,9 +80,28 @@ Planned logic, to be confirmed when implemented:
 
 Edge cases to handle: BST/GMT switches (use `Intl.DateTimeFormat` with `timeZone: 'Europe/London'` rather than raw `Date` arithmetic), and a schedule shorter than the day count (wrap with modulo, and log it as a known limitation until the schedule is extended).
 
-## Blur levels _(pending — phase 3)_
+## Map rendering
 
-Six PNGs per station. Level 1 is shown for guess 1 (most blurred), level 6 for guess 6 (sharpest). The blur radius follows a curve, not a straight line, so that level 3 feels like "I nearly have it". The exact radii are tuned by eye on five sample stations before the full set is rendered, and recorded here once agreed.
+`scripts/render_maps.py` produces `public/maps/<slug>/1.webp … 6.webp` for all 272 stations, 15.9 MB in total.
+
+For each station it asks the Overpass API for the raw OpenStreetMap features in a square around the station (1 km, plus a 15% margin so nothing is clipped at the edge), then draws them with Pillow:
+
+1. **Land use** — parks, grass, woods, cemeteries, industrial and retail areas.
+2. **Water** — polygons first, then rivers and canals as lines.
+3. **Buildings.**
+4. **Roads**, in two passes: a darker casing under every road, then the fill on top, ordered so motorways sit above minor streets.
+5. **Railways** — surface lines in solid grey, tunnels faint, so the Tube is hinted at without being a giveaway.
+
+Everything is drawn at 2x and downscaled with Lanczos, because Pillow has no antialiasing of its own. Coordinates are projected with a simple equirectangular projection corrected by cos(latitude), which is accurate to well under a pixel over 1 km.
+
+Two details worth knowing:
+
+- **Multipolygon rings.** A large water body such as the Thames arrives as dozens of separate ways, clipped by the query bounding box, so none of them is a closed ring. `stitch()` chains the open segments end to end (reversing where that joins them more closely), which walks one bank, crosses, and comes back along the other; the implicit close runs along the box edge, giving exactly the polygon to fill.
+- **Caching.** Every Overpass response is written to `data/raw/osm_<slug>.json` (git-ignored). Re-running touches the network only for stations it hasn't got, so colours and blur radii can be re-tuned offline in a few minutes. Failed stations are skipped and listed at the end rather than killing the run.
+
+## Blur levels
+
+Six images per station. Level 1 is shown for guess 1 (most blurred), level 6 for guess 6 (sharpest). Radii are `[36, 20, 10, 5, 2, 0]` — a curve, not a straight line, so that level 3 is the "I nearly have it" moment. Each level is stored at `[160, 160, 320, 640, 640, 640]` px, since a heavily blurred image holds no detail worth full resolution. See ADR-009.
 
 ## Hint ladder
 
