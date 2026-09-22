@@ -64,14 +64,19 @@ SIZE_PX = 640          # side of the output image, in pixels
 SUPERSAMPLE = 2        # draw at 2x then downscale: Pillow has no antialiasing of its own
 
 # Gaussian blur radius (in SIZE_PX pixels) for guesses 1..6. Not linear on
-# purpose: the big drop between levels 2 and 3 is what makes guess 3 feel like
-# "I nearly have it", while 4-6 are refinement. Tuned by eye on five stations.
-BLUR_RADII = [36, 20, 10, 5, 2, 0]
+# purpose: the drop between levels 2 and 3 is what makes guess 3 feel like
+# "I nearly have it", while 4-6 are refinement.
+#
+# These are the second set. The first, [36, 20, 10, 5, 2, 0], made guess 1 an
+# almost featureless colour wash — it looked striking but gave a player nothing
+# to reason about, so the first two guesses were effectively wasted. See ADR-009.
+BLUR_RADII = [13, 8, 4.5, 2.5, 1, 0]
 
-# Pixel size each level is stored at. A heavily blurred image carries no
-# detail finer than its blur radius, so storing it at a quarter of the size
-# and letting the browser upscale it is visually identical and ~10x smaller.
-LEVEL_SIZES = [160, 160, 320, 640, 640, 640]
+# Pixel size each level is stored at. A blurred image holds no detail finer
+# than its radius, so early levels can be stored smaller and upscaled by the
+# browser with no visible difference. Keep size >= 640/radius * 3 or the
+# downscale, not the blur, becomes what limits the image.
+LEVEL_SIZES = [320, 384, 512, 640, 640, 640]
 
 # Colours. Light map so it reads inside the dark UI; muted so the blur levels
 # stay legible rather than turning into mud.

@@ -72,11 +72,20 @@ Template:
 - Consequences: More code than pointing at a tile server, but we control the cartography, the maps are label-free by construction, and the licence position is clean and documented. The renderer is also reproducible offline from the cached responses. Cost: our maps are plainer than a professional basemap, which suits a blurred-image puzzle.
 
 ## ADR-009: Blur curve and per-level image sizes
-- Date: 2026-09-22
-- Status: Accepted
+- Date: 2026-09-22 (revised 2026-09-22 after playtesting)
+- Status: Accepted — revised curve below supersedes the original
 - Context: Six levels have to go from "almost nothing" to "fully legible" with guess 3 feeling like the turning point, and the whole set has to stay small.
 - Decision: Gaussian radii `[36, 20, 10, 5, 2, 0]` — deliberately non-linear, with the big drop between levels 2 and 3. Reviewed on a five-station contact sheet (Amersham, Bank, Hainault, Turnham Green, Westminster) and signed off. Levels are stored at `[160, 160, 320, 640, 640, 640]` px: an image blurred at radius 36 carries no detail finer than that, so storing it small and letting the browser scale it up is visually identical and roughly ten times smaller.
-- Consequences: Level 1 is under 1 KB for most stations. The curve is a single constant to re-tune, and re-rendering from cache takes a few minutes with no network.
+- Consequences: The curve is a single constant to re-tune, and re-rendering from cache takes about a minute with no network.
+- **Revision:** playing the finished UI showed the original curve was far too aggressive. Levels 1 and 2 were near-featureless colour washes — striking to look at, but they gave a player nothing to reason about, so the first two of six guesses were effectively wasted. The curve is now `[13, 8, 4.5, 2.5, 1, 0]`: guess 1 shows major roads, water and green space clearly enough to place a district, and the ramp to legibility happens across the middle guesses instead of all at the end. Level sizes rose to `[320, 384, 512, 640, 640, 640]` to match — at radius 13 the old 160 px storage, not the blur, would have been what limited the image. The full set grew from 15.9 MB to 20.7 MB, still comfortably inside ADR-003's threshold.
+
+## ADR-013: A shared daily puzzle *and* unlimited practice rounds
+- Date: 2026-09-22
+- Status: Accepted — amends the brief
+- Context: The brief specified one puzzle per day, identical for everyone. In review the preference changed to letting a player play as many rounds as they like. Pure endless play was considered and rejected: it would leave the share grid pointless (nobody else played your puzzle) and streaks meaningless, losing the two things that make the format social.
+- Decision: Keep the shared daily puzzle as the headline round — it is what the share grid and streaks are built on — and add unlimited practice rounds on top, reachable from the end screen. Practice rounds draw from the full 272 stations, are not shareable and do not touch stats; only the daily counts.
+- Consequences: One extra mode rather than a different game, and the daily logic, share grid and stats from phase 5 are unaffected. Practice needs its own lightweight state so an in-progress practice round cannot overwrite the day's saved daily game. The curated schedule stays worth doing, because it now only has to be good for the daily.
+
 
 ## ADR-010: WebP rather than PNG for the map images
 - Date: 2026-09-22

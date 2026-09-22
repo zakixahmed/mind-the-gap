@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Softened the blur curve to `[13, 8, 4.5, 2.5, 1, 0]` after playtesting: the original made the first two guesses unplayable. Full set re-rendered, 20.7 MB.
+
 ### Added
 - The game itself: `public/index.html` — full core loop (progressive blur, station autocomplete, six guesses, hint ladder, win/lose screen) against one hardcoded puzzle. Dark theme, mobile-first, no framework or build step.
 - `public/data/stations.json`: trimmed, minified station list written alongside the canonical one, so `public/` deploys standalone.
