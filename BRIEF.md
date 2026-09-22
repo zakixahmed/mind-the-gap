@@ -85,7 +85,8 @@ _Updated at the end of every session. Newest first._
 - Blur is now curve E (`[5, 3.2, 2, 1, 0.4, 0]`). Levels 4-6 are nearly indistinguishable at these radii — if the late guesses feel flat in play, spreading the curve (e.g. `[7, 5, 3.5, 2.2, 1, 0]`) would restore a visible step without going back to a heavy guess 1.
 
 **Next — start here**
-- Phase 6: polish and playtest. Walk through as a first-time player at phone width, list every friction point, fix them, then add the how-to-play modal (first visit), the light mode toggle, and check the footer attribution reads properly.
+- Phase 7 is done and committed, tagged `v0.1.0`; Zack pushes and sets Pages source to "GitHub Actions". Live at https://zakixahmed.github.io/mind-the-gap/
+- Then phase 6: polish and playtest, done against the live URL on a real phone. Walk through as a first-time player at phone width, list every friction point, fix them, then add the how-to-play modal (first visit), the light mode toggle, and check the footer attribution reads properly.
 - Content backlog, not blocking: `public/data/facts.json` has 20 of the 100 scheduled stations. The rest fall back to a generated sentence, which is accurate but plainer. Worth topping up over time.
 
 ### 2026-09-22 — after session 3 (phase 4 complete, two review changes)

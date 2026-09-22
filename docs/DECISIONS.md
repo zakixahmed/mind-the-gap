@@ -129,3 +129,10 @@ Template:
 - Context: The autocomplete only appeared once the player typed, so tapping the box did nothing — a dead end for anyone who does not already know a station name, and no way to browse what is available.
 - Decision: An empty query now returns the whole list rather than nothing, so focusing the input opens all 272 stations, scrollable, and typing filters from there. Crucially, the top entry is pre-highlighted **only** once something has been typed: with the full list open and nothing typed, a stray Enter would otherwise spend one of six guesses on whatever sorts first (Acton Town). Arrowing into the list highlights normally, and the highlight is scrolled into view.
 - Consequences: The input works as both a search box and a browsable menu, with one code path. The full list is 272 DOM nodes, built once per open — measurably instant, and far simpler than virtualising a list this size.
+
+## ADR-017: Deploy with a GitHub Actions workflow rather than renaming `public/`
+- Date: 2026-09-22
+- Status: Accepted
+- Context: GitHub Pages serves a branch's root or its `/docs` folder — it cannot be pointed at `public/`, which is where the brief put the site. The options were to rename `public/` to `docs/`, to publish from a `gh-pages` branch, or to upload the folder as a Pages artifact from Actions.
+- Decision: A GitHub Actions workflow uploads `public/` directly. The repository keeps the layout the project was designed around, and the site is published byte-for-byte with no build or transformation step, which matches ADR-002. The workflow first checks that the data files are present and that all 100 scheduled stations have six rendered map levels — the two failures that would otherwise produce a site that loads but does not work.
+- Consequences: One more file to maintain, and a one-time repository setting (Pages source: GitHub Actions). In exchange the deploy is reproducible, visible in the Actions tab, and has a guard against shipping a broken schedule. Every asset path is relative, so the same files work under `/mind-the-gap/` or at a domain root with no base-path configuration.

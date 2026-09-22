@@ -1,0 +1,64 @@
+# Publish the game to GitHub Pages.
+#
+# GitHub Pages can only serve a branch's root or its /docs folder, and the site
+# lives in public/. Rather than rename the folder to suit the host, this
+# workflow uploads public/ as the Pages artifact — the repository keeps the
+# layout the project was designed around, and nothing is built or transformed
+# on the way (there is no build step; see docs/DECISIONS.md, ADR-002).
+#
+# One-time setup in the repository: Settings → Pages → Build and deployment →
+# Source: "GitHub Actions".
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # lets you redeploy by hand from the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; if pushes arrive quickly, finish the running
+# one and go straight to the newest rather than queueing every commit.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sanity-check the site before publishing
+        # Cheap guards against the two ways this site could break silently:
+        # a data file missing, or a scheduled station with no rendered maps.
+        run: |
+          set -euo pipefail
+          for f in public/index.html public/data/stations.json public/data/schedule.json; do
+            test -s "$f" || { echo "missing or empty: $f"; exit 1; }
+          done
+          python3 - <<'PY'
+          import json, pathlib, sys
+          schedule = json.loads(pathlib.Path("public/data/schedule.json").read_text())["schedule"]
+          missing = [s for s in schedule
+                     if not all(pathlib.Path(f"public/maps/{s}/{n}.webp").is_file() for n in range(1, 7))]
+          if missing:
+              sys.exit(f"scheduled stations with missing map levels: {missing}")
+          print(f"{len(schedule)} scheduled puzzles, all six map levels present")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

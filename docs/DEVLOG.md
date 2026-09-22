@@ -4,6 +4,26 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-22 — Session 3 (continued): Phase 7, deployment
+
+Phase 7 was brought forward ahead of phase 6: a live URL makes the phase 6
+playtest possible on a real phone rather than a simulated viewport, which is
+better testing, and testing over the local network had not worked.
+
+**Built**
+- `.github/workflows/deploy.yml`: publishes `public/` to GitHub Pages on every push to `main`. GitHub Pages cannot serve an arbitrary folder, so rather than rename `public/` to suit the host, the workflow uploads it as the Pages artifact (ADR-017). It first checks the data files exist and that all 100 scheduled stations have six rendered map levels — the two ways this site could break silently while still loading.
+- `public/.nojekyll`, so Pages serves the files as-is.
+- Real screenshots at 390 px and 1280 px, committed to `docs/screenshots/` and used in the README, replacing the placeholder.
+- README deployment section, live link, and `v0.1.0` in the changelog.
+
+**Verified**
+- Every asset path in `index.html` is relative, so the game works under `/mind-the-gap/` as well as at a domain root — no base-path configuration needed.
+- Ran the workflow's own sanity check locally: 100 scheduled puzzles, all six levels present.
+
+**Next**
+- Zack creates the repository and pushes; Pages source must be set to "GitHub Actions" once, in Settings.
+- Then phase 6: polish and playtest, on a real phone against the live URL.
+
 ## 2026-09-22 — Session 3 (continued): Phase 5, daily logic and practice mode
 
 **Review changes first**

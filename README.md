@@ -4,9 +4,14 @@ A daily puzzle game: guess the London Underground station from a heavily blurred
 
 Think Wordle meets Worldle, for London.
 
-> **Status:** in development — see [docs/DEVLOG.md](docs/DEVLOG.md) for progress.
+**▶ Play it: [zakixahmed.github.io/mind-the-gap](https://zakixahmed.github.io/mind-the-gap/)**
 
-![Screenshot placeholder — gameplay GIF will go here after phase 6](docs/screenshot-placeholder.png)
+<p>
+  <img src="docs/screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with zone and line hints revealed" width="300">
+  <img src="docs/screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
+</p>
+
+<img src="docs/screenshots/desktop.png" alt="The game at desktop width" width="620">
 
 ## How to play
 
@@ -86,6 +91,25 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 | Daily seeding | London calendar-date arithmetic → index into `data/schedule.json` | No server, identical for everyone, correct across DST. See ADR-014 |
 | Hosting | GitHub Pages from `public/` | Free, static, relative paths only |
 
+## Deployment
+
+The site is `public/` and nothing else — no build step, no bundler, no server.
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) publishes that
+folder to GitHub Pages on every push to `main`.
+
+GitHub Pages can only serve a branch's root or its `/docs` folder, so rather
+than rename `public/` to suit the host, the workflow uploads it as the Pages
+artifact and the repository keeps the layout the project was designed around.
+Before publishing, the workflow checks that the data files exist and that every
+one of the 100 scheduled stations has all six map levels rendered — the two
+ways this site could break silently.
+
+Every asset path in `index.html` is relative, so the game works served from a
+subfolder (`/mind-the-gap/`) or from a domain root, with no base-path config.
+
+To deploy a fork: **Settings → Pages → Build and deployment → Source: GitHub
+Actions**, then push to `main`.
+
 ## Licence and attribution
 
 - **Code:** [MIT](LICENSE).
@@ -100,7 +124,7 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 - [x] Phase 4 — game UI with one hardcoded puzzle
 - [x] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule, practice mode
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
-- [ ] Phase 7 — deployment, real screenshots, `v0.1.0`
+- [x] Phase 7 — deployment, real screenshots, `v0.1.0`
 
 **Later, not in MVP:** archive mode for past puzzles, hard mode, distance-and-direction feedback on wrong guesses.
 

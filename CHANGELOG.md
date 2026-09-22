@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] — 2026-09-22
+
 ### Added
+- GitHub Pages deployment via GitHub Actions, publishing `public/` with a pre-flight check that every scheduled station has all six map levels.
 - Daily puzzle seeding from the London calendar date, with a curated 100-day schedule (`scripts/build_schedule.py` → `data/schedule.json`).
 - Emoji share grid with the Web Share API on mobile and a clipboard fallback.
 - Local stats: games played, win %, current and max streak, guess distribution — plus resume-on-reload for an in-progress daily game.
@@ -28,4 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Placeholder `public/index.html`.
 - Documentation skeleton: README, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/DEVLOG.md`.
 
-[Unreleased]: https://github.com/USERNAME/mind-the-gap/compare/main...HEAD
+[Unreleased]: https://github.com/zakixahmed/mind-the-gap/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/zakixahmed/mind-the-gap/releases/tag/v0.1.0
