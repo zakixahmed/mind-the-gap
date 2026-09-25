@@ -29,6 +29,9 @@ of player feedback. See `docs/FEEDBACK.md`.
   first-letter and letter-count hints are merged into one rung.
 - Roads are drawn with a minimum width so arterial routes stay legible at the
   wider crop; footways, cycleways, steps and service roads are no longer drawn.
+- Individual buildings are no longer drawn; built-up areas are shown as a flat
+  wash over residential land. At this scale the building layer was texture
+  rather than information, and it was around 40% of the map data fetched.
 - Cached OpenStreetMap responses are gzipped and their filenames carry the crop
   size, so map data can never be reused at the wrong scale.
 

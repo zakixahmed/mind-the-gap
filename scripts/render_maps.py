@@ -98,8 +98,9 @@ COLOURS = {
     "industrial": "#e8e2e0",
     "retail": "#f0e5dc",
     "water": "#a9cbe9",
-    "building": "#ddd8d0",
-    "building_edge": "#cfc9c0",
+    # Replaces the old per-building fill: a flat wash over residential
+    # landuse, which is what the building layer amounted to once blurred.
+    "built_up": "#e2ddd4",
     "road_casing": "#c8c2b8",
     "motorway": "#f2b46a",
     "primary": "#f6d48d",
@@ -143,6 +144,7 @@ LAND = {
     ("landuse", "cemetery"): "cemetery",
     ("landuse", "industrial"): "industrial", ("landuse", "railway"): "industrial",
     ("landuse", "retail"): "retail", ("landuse", "commercial"): "retail",
+    ("landuse", "residential"): "built_up", ("landuse", "garages"): "built_up",
 }
 
 
@@ -187,15 +189,25 @@ class Projector:
 def overpass_query(bbox: tuple[float, float, float, float]) -> str:
     """The Overpass QL for everything we draw inside ``bbox``, with geometry inlined."""
     b = ",".join(f"{v:.6f}" for v in bbox)
-    return f"""[out:json][timeout:90];
+    # Two things keep this query affordable, and affordability is not a nicety:
+    # at a 2.5 km box the old query asked the free Overpass instances for ~6x
+    # the area and they answered with 504s more often than data.
+    #
+    # 1. Only the road classes we actually draw. v0.2.0 stopped drawing
+    #    footways, cycleways, steps and service roads (ADR-019), and in London
+    #    those are a large share of every highway way in a box this size.
+    # 2. No buildings. At this scale an individual building is a couple of
+    #    pixels and the whole layer reads as texture; a side-by-side at guess-1
+    #    blur is indistinguishable with and without it, and it was 37-49% of
+    #    the elements returned. Built-up areas are carried by landuse instead.
+    return f"""[out:json][timeout:180];
 (
-  way["highway"]({b});
-  way["railway"]({b});
+  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)(_link)?$"]({b});
+  way["railway"~"^(rail|light_rail|subway|tram|narrow_gauge)$"]({b});
   way["waterway"]({b});
-  way["natural"="water"]({b});
+  way["natural"~"^(water|heath|wood|scrub)$"]({b});
   way["landuse"]({b});
   way["leisure"]({b});
-  way["building"]({b});
   relation["natural"="water"]({b});
   relation["waterway"="riverbank"]({b});
   relation["leisure"~"park|garden|nature_reserve"]({b});
@@ -283,12 +295,15 @@ def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict] | 
         print(f"  no cached OSM data for {slug} (offline)", file=sys.stderr)
         return None
 
-    query = overpass_query(bbox_around(lat, lon, AREA_M * 1.15))  # 15% margin so edge features aren't clipped
+    # 8% margin so features straddling the edge are not clipped. It was 15%
+    # at a 1 km crop, where 150 m of slack was cheap; at 2.5 km the same
+    # fraction is 375 m of extra city in every direction, for nothing.
+    query = overpass_query(bbox_around(lat, lon, AREA_M * 1.08))
     for attempt in range(9):
         url = OVERPASS_URLS[attempt % len(OVERPASS_URLS)]  # rotate mirrors on each retry
         host = url.split("/")[2]
         try:
-            resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=120)
+            resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=210)
         except requests.RequestException as exc:
             # Connection errors on every mirror usually mean *our* network dropped; wait longer.
             wait = 10 * (attempt + 1)
@@ -355,12 +370,8 @@ def draw_map(elements: list[dict], lat: float, lon: float) -> Image.Image:
             width_m, floor = {"river": (12, 2.5), "canal": (8, 1.5), "stream": (3, 0.8)}[w]
             line(e, COLOURS["water"], width_m, floor)
 
-    # 2. Buildings.
-    for e in tagged:
-        if e["type"] == "way" and "building" in e["tags"]:
-            # No outline at this crop: 6x the buildings, each a few pixels
-            # across, and the edges turn the built-up areas into mud.
-            poly(e, COLOURS["building"])
+    # 2. Buildings are no longer drawn at all — see overpass_query. Built-up
+    #    areas come from the landuse wash in step 1 instead.
 
     # 3. Roads: casing pass, then fill pass, minor roads before major so major sit on top.
     roads = [(e, ROADS[e["tags"]["highway"]]) for e in tagged
