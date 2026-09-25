@@ -4,6 +4,70 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-25 — Session 4: round-1 feedback, and the start of v0.2.0
+
+The game went out to friends after the v0.1.0 deploy. The feedback was
+unanimous and unwelcome: too hard to guess. Nobody reported a bug, nobody
+complained about the layout or the share grid — the one complaint was
+difficulty, which is the good version of this problem, in that everything
+mechanical worked and the fault was in the design.
+
+The first instinct was to reduce the blur again. That would have been wrong.
+The blur had already been softened twice, and taking it further just arrives at
+showing an unblurred map. Writing the complaint down properly
+(`docs/FEEDBACK.md`) and working backwards from it found four separate causes,
+of which blur was the least important.
+
+**Built**
+- `docs/FEEDBACK.md`, which is now the document the rest of this session
+  justifies itself against.
+- Crop widened from 1 km to 2.5 km at 896 px (ADR-018). This is the main fix:
+  a 1 km square is terraced streets in most of London, and the features that
+  let you place yourself live further out than the old frame reached.
+- Blur curve rewritten for the new scale, spread so every guess is a visible
+  step. The old curve's tail was flat — levels 4, 5 and 6 were effectively the
+  same picture, so a stuck player spent guesses and got nothing back.
+- Cartographic generalisation for roads (ADR-019): a pixel floor for the
+  classes that carry a place's structure, and the smallest classes dropped
+  entirely rather than drawn as sub-pixel noise.
+- `scripts/build_landmarks.py` (ADR-020): a "nearby landmark" hint derived from
+  the OSM data already on disk, with a deliberately strict test for names that
+  would give the station away.
+- Hint ladder rebuilt as Zone, Nearby, Line, Borough, Name, and hints now
+  unlock face-down and are turned over by tapping (ADR-021).
+- Scale bar and north cue over the map frame. Players had no way to tell
+  whether they were looking at 200 m or 2 km of city.
+
+**What broke**
+- The OSM cache was keyed on station slug alone, so widening the crop would
+  have silently reused 1 km data and rendered 272 maps as a small island in a
+  blank square. Caught before the re-fetch, not after; the filename now carries
+  the crop size (ADR-022). This is the bug of the session — it would have
+  looked like a rendering fault and cost hours.
+- Two self-inflicted ones caught by testing rather than by reading: the
+  per-level WebP quality patch referenced a variable that did not exist in that
+  scope, and the scale bar measured itself against its own inset container
+  rather than the map, coming out at 18.8% instead of 20%. A scale bar that is
+  quietly wrong is worse than none, because a player would trust it.
+
+**Verified**
+- Full round driven in a real browser at 390 px: hints unlock and reveal
+  correctly, the landmark rung renders, the scale bar measures 19.9% of the
+  frame, no console errors.
+- Leak test on the landmark rejecter: it blocks "Hyde Park" at Hyde Park Corner
+  and "Wembley Stadium" at Wembley Park, and allows the Imperial War Museum at
+  Elephant & Castle.
+
+**Next**
+- Re-fetch and re-render all 272 stations at 2.5 km, then run
+  `build_landmarks.py --show` and read the choices before trusting them.
+- Measure the map set; if it has grown too far, `SIZE_PX` and the blurred-level
+  quality are the two knobs.
+- Phase 6 proper is still outstanding: how-to-play modal, light mode, and a
+  first-time-player walkthrough.
+
+---
+
 ## 2026-09-22 — Session 3 (continued): Phase 7, deployment
 
 Phase 7 was brought forward ahead of phase 6: a live URL makes the phase 6

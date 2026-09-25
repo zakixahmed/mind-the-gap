@@ -76,6 +76,53 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-25 — after session 4 (round-1 feedback; v0.2.0 in progress)
+
+The game was shared with friends after the v0.1.0 deploy and came back with one
+consistent complaint: too hard to guess. This session is the response, and the
+reasoning behind it is in `docs/FEEDBACK.md` rather than only in the commits.
+
+**Done**
+- `docs/FEEDBACK.md` — the round-1 record and the diagnosis it drives.
+- Map crop widened 1 km → 2.5 km at 896 px, blur curve rewritten for the new
+  scale and spread so each guess is a visible step (ADR-018).
+- Road rendering generalised for the wider view: pixel floors for the classes
+  that carry a place's structure, smallest classes dropped (ADR-019).
+- `scripts/build_landmarks.py` — a nearby-landmark hint derived from cached OSM
+  data, with a strict test against names that give the station away (ADR-020).
+- Hint ladder rebuilt (Zone, Nearby, Line, Borough, Name) and hints now unlock
+  face-down, revealed by tapping (ADR-021).
+- Scale bar and north cue on the map frame.
+- OSM cache filenames now carry the crop size, and are gzipped (ADR-022).
+- Front end verified in a real browser at 390 px: no console errors, hints
+  behave, scale bar measures 19.9% of the frame.
+- `v1` branch created at `v0.1.0`, so the shipped version stays addressable
+  while `main` becomes v2. One repository, one history — deliberately not two
+  folders.
+
+**Next**
+1. Re-fetch and re-render all 272 stations at 2.5 km. This is the long pole and
+   has to run on the Mac, since the sandbox cannot reach Overpass:
+   `python scripts/render_maps.py --contact-sheet`
+2. `python scripts/build_landmarks.py --show` and actually read the output
+   before trusting it; fill `OVERRIDES` for anything wrong or missing.
+3. Measure the rendered set. If it has grown too far, `SIZE_PX` and
+   `WEBP_QUALITY_BLURRED` are the two knobs.
+4. Re-take the screenshots in `docs/screenshots/` — they still show 1 km maps
+   and the old hint ladder.
+5. Tag `v0.2.0` and deploy; then a second round of feedback from the same
+   friends, which is the only real test of whether any of this worked.
+6. Phase 6 is still outstanding: how-to-play modal, light mode, first-time
+   player walkthrough.
+
+**Open questions**
+- The blur curve `[9, 6.5, 4.2, 2.4, 1.1, 0]` is calculated, not playtested. It
+  has never been seen against real 2.5 km data — the smoke test only had the
+  old 1 km cache to draw with. Expect to adjust it once the full render exists.
+- `public/data/facts.json` still covers 20 of 100 scheduled stations.
+- Git leaves lock files behind in this environment and cannot remove them; they
+  get moved to `_to_delete/` (gitignored), which is safe to empty by hand.
+
 ### 2026-09-22 — after session 3 (phases 4 and 5 complete)
 
 **Done**

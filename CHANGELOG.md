@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+Version 0.2.0 in progress — the legibility pass, in response to the first round
+of player feedback. See `docs/FEEDBACK.md`.
+
+### Added
+- A "nearby landmark" hint: the nearest notable place, with a rough distance and
+  direction, derived from OpenStreetMap by `scripts/build_landmarks.py`.
+- A scale bar and north cue on the map, so the crop can be read at a known size.
+- `docs/FEEDBACK.md`, recording each round of playtesting and what changed
+  because of it.
+
+### Changed
+- Maps now cover 2.5 km rather than 1 km, at a higher resolution. This is the
+  main response to "too hard to guess": the old crop was too tight to contain
+  the features that let a player place themselves.
+- The blur curve is re-spread so every guess visibly sharpens the map. The
+  previous curve's last three levels were almost identical.
+- Hints unlock face-down and are revealed by tapping, rather than appearing
+  automatically — a wrong guess now offers help instead of forcing it.
+- The hint ladder is Zone, Nearby, Line, Borough, Name; the separate
+  first-letter and letter-count hints are merged into one rung.
+- Roads are drawn with a minimum width so arterial routes stay legible at the
+  wider crop; footways, cycleways, steps and service roads are no longer drawn.
+- Cached OpenStreetMap responses are gzipped and their filenames carry the crop
+  size, so map data can never be reused at the wrong scale.
 
 ## [0.1.0] — 2026-09-22
 
