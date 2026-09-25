@@ -14,8 +14,8 @@ Output
 ------
     public/maps/<slug>/1.webp … 6.webp   1 = most blurred (guess 1), 6 = sharp (guess 6)
 
-WebP rather than PNG: the full set is ~25 MB as WebP (quality 80) against
-~95 MB as palette PNG, and every current browser decodes it. ADR-010.
+WebP rather than PNG, which keeps the whole set small enough to live in the
+repository alongside the code. ADR-010.
 
 Usage
 -----
@@ -31,6 +31,7 @@ tweaking colours or blur radii and re-running never hits the network again.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import math
 import sys
@@ -55,27 +56,35 @@ OVERPASS_URLS = [
     "https://overpass.kumi.systems/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
 ]
-WEBP_QUALITY = 80
+# Encoding quality. The sharp final level is the only one where detail is
+# worth paying for; the blurred levels have little high-frequency content left
+# and compress hard, so a lower setting costs nothing visible.
+WEBP_QUALITY = 82
+WEBP_QUALITY_BLURRED = 70
 USER_AGENT = "mind-the-gap-render-maps/0.1 (zzakiahmedd@gmail.com)"
 OVERPASS_PAUSE = 1.0  # seconds between queries; polite, and well under the public instance's limits
 
-AREA_M = 1000          # side of the square drawn around the station, in metres
-SIZE_PX = 640          # side of the output image, in pixels
+AREA_M = 2500          # side of the square drawn around the station, in metres
+SIZE_PX = 896          # side of the output image, in pixels
 SUPERSAMPLE = 2        # draw at 2x then downscale: Pillow has no antialiasing of its own
 
 # Gaussian blur radius (in SIZE_PX pixels) for guesses 1..6.
 #
-# Third set, after two rounds of playtesting. [36, 20, 10, 5, 2, 0] made the
-# first two guesses a featureless wash; [13, 8, 4.5, 2.5, 1, 0] still read as
-# too heavy on a large screen, where the map is displayed wider than the 640 px
-# it was blurred at, which amplifies the effect. These radii keep guess 1
-# recognisable to someone who knows London while leaving street detail soft.
-BLUR_RADII = [5, 3.2, 2, 1, 0.4, 0]
+# Fourth set, rewritten for the 2.5 km crop (ADR-018). The previous curve,
+# [5, 3.2, 2, 1, 0.4, 0], had two faults that round-1 playtesting exposed: it
+# was calibrated against a 1 km crop, and its tail was flat — levels 4, 5 and 6
+# were indistinguishable, so a stuck player spent guesses and got nothing back.
+#
+# These radii are spread so every guess is a visible step, and they are set in
+# metres-on-the-ground rather than by eye: at 2500 m across 896 px one pixel is
+# about 2.8 m, so guess 1 blurs at roughly 25 m — enough to smear terraced
+# streets into texture while parks, water, railways and arterial roads survive.
+BLUR_RADII = [9, 6.5, 4.2, 2.4, 1.1, 0]
 
-# At these radii there is nothing to gain from storing early levels smaller:
-# the downscale, not the blur, would become what limits the image. Full size
-# throughout costs about 30 MB for the whole set, still inside ADR-003.
-LEVEL_SIZES = [640, 640, 640, 640, 640, 640]
+# Full size at every level. Storing the early levels smaller would make the
+# downscale, not the blur, the thing limiting the image — and at a 2.5 km crop
+# there is real detail in the wide shapes that is worth keeping.
+LEVEL_SIZES = [896, 896, 896, 896, 896, 896]
 
 # Colours. Light map so it reads inside the dark UI; muted so the blur levels
 # stay legible rather than turning into mud.
@@ -101,16 +110,26 @@ COLOURS = {
     "rail_tunnel": "#bdbdbd",
 }
 
-# Road class → (colour key, width in metres). Anything not listed is skipped.
+# Road class → (colour key, width in metres, minimum drawn width in output px).
+#
+# The metre width is the honest one. The pixel floor is cartographic
+# generalisation, and it is why this table changed for v0.2.0: at a 2.5 km crop
+# a 12 m primary road is about four pixels wide, and a road that thin reads as a
+# scratch rather than a route. The classes that carry a place's structure get a
+# floor that keeps them legible however far out the crop goes; minor roads get
+# almost none, because at this scale they are texture rather than information.
+#
+# Footways, cycleways, steps and service roads are no longer drawn at all. At
+# 1 km they added texture; at 2.5 km they are sub-pixel noise that muddies
+# everything drawn underneath them.
 ROADS = {
-    "motorway": ("motorway", 16), "motorway_link": ("motorway", 10),
-    "trunk": ("motorway", 14), "trunk_link": ("motorway", 9),
-    "primary": ("primary", 12), "primary_link": ("primary", 8),
-    "secondary": ("secondary", 10), "secondary_link": ("secondary", 7),
-    "tertiary": ("minor", 8), "tertiary_link": ("minor", 6),
-    "residential": ("minor", 6), "unclassified": ("minor", 6), "living_street": ("minor", 5),
-    "service": ("minor", 4), "pedestrian": ("minor", 5),
-    "footway": ("path", 2), "path": ("path", 2), "cycleway": ("path", 2), "steps": ("path", 2),
+    "motorway": ("motorway", 16, 5.0), "motorway_link": ("motorway", 10, 3.0),
+    "trunk": ("motorway", 14, 4.5), "trunk_link": ("motorway", 9, 3.0),
+    "primary": ("primary", 12, 4.0), "primary_link": ("primary", 8, 2.5),
+    "secondary": ("secondary", 10, 3.0), "secondary_link": ("secondary", 7, 2.0),
+    "tertiary": ("minor", 8, 2.0), "tertiary_link": ("minor", 6, 1.5),
+    "residential": ("minor", 6, 1.0), "unclassified": ("minor", 6, 1.0),
+    "living_street": ("minor", 5, 1.0), "pedestrian": ("minor", 5, 1.0),
 }
 
 # Land polygons: (tag key, tag value) → colour key. Drawn first, so order matters little.
@@ -239,14 +258,27 @@ def rings(element: dict) -> list[list[dict]]:
 
 
 def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict] | None:
-    """Overpass elements for the station's square, cached in data/raw/osm_<slug>.json.
+    """Overpass elements for the station's square, cached under data/raw/.
 
     Returns None if every attempt failed, so the caller can skip the station
     and keep going; a re-run picks up the gaps from the cache.
     """
-    cache = RAW_DIR / f"osm_{slug}.json"
+    # The cache filename carries the crop size. Overpass data is clipped to the
+    # bbox it was requested for, so a cache fetched at 1000 m cannot be reused
+    # when AREA_M is 2500 — it would render as a small island of map in a blank
+    # square, and silently, which is the worst way for it to fail. Stamping the
+    # size into the name makes staleness impossible and leaves the older set on
+    # disk, so a previous release stays reproducible.
+    # Gzipped, because widening the crop to 2.5 km multiplies the area by 6.25
+    # and the raw set would be about 3 GB on disk uncompressed. Overpass JSON is
+    # extremely repetitive and compresses by roughly 85%.
+    cache = RAW_DIR / f"osm_{slug}_{AREA_M}m.json.gz"
     if cache.exists():
-        return json.loads(cache.read_text())["elements"]
+        with gzip.open(cache, "rt") as fh:
+            return json.load(fh)["elements"]
+    legacy = RAW_DIR / f"osm_{slug}.json"
+    if AREA_M == 1000 and legacy.exists():
+        return json.loads(legacy.read_text())["elements"]
     if offline:
         print(f"  no cached OSM data for {slug} (offline)", file=sys.stderr)
         return None
@@ -271,7 +303,8 @@ def fetch_osm(slug: str, lat: float, lon: float, offline: bool) -> list[dict] | 
         resp.raise_for_status()
         data = resp.json()
         RAW_DIR.mkdir(parents=True, exist_ok=True)
-        cache.write_text(json.dumps(data))
+        with gzip.open(cache, "wt") as fh:
+            json.dump(data, fh)
         time.sleep(OVERPASS_PAUSE)
         return data["elements"]
     print(f"  giving up on {slug} for now; re-run to retry", file=sys.stderr)
@@ -296,10 +329,13 @@ def draw_map(elements: list[dict], lat: float, lon: float) -> Image.Image:
             if len(ring) >= 3:
                 d.polygon([project(p) for p in ring], fill=colour, outline=outline)
 
-    def line(elem: dict, colour: str, width_m: float) -> None:
+    def line(elem: dict, colour: str, width_m: float, min_px: float = 0.0) -> None:
+        """Draw a way. ``min_px`` is a floor in *output* pixels, so it is scaled
+        up by SUPERSAMPLE here and survives the downscale at the end."""
         pts = [project(p) for p in elem.get("geometry", [])]
         if len(pts) >= 2:
-            d.line(pts, fill=colour, width=max(1, round(width_m * scale)), joint="curve")
+            width = max(width_m * scale, min_px * SUPERSAMPLE)
+            d.line(pts, fill=colour, width=max(1, round(width)), joint="curve")
 
     tagged = [e for e in elements if e.get("tags")]
 
@@ -316,23 +352,26 @@ def draw_map(elements: list[dict], lat: float, lon: float) -> Image.Image:
     for e in tagged:
         w = e["tags"].get("waterway")
         if e["type"] == "way" and w in ("river", "canal", "stream"):
-            line(e, COLOURS["water"], {"river": 12, "canal": 8, "stream": 3}[w])
+            width_m, floor = {"river": (12, 2.5), "canal": (8, 1.5), "stream": (3, 0.8)}[w]
+            line(e, COLOURS["water"], width_m, floor)
 
     # 2. Buildings.
     for e in tagged:
         if e["type"] == "way" and "building" in e["tags"]:
-            poly(e, COLOURS["building"], COLOURS["building_edge"])
+            # No outline at this crop: 6x the buildings, each a few pixels
+            # across, and the edges turn the built-up areas into mud.
+            poly(e, COLOURS["building"])
 
     # 3. Roads: casing pass, then fill pass, minor roads before major so major sit on top.
     roads = [(e, ROADS[e["tags"]["highway"]]) for e in tagged
              if e["type"] == "way" and e["tags"].get("highway") in ROADS and e["tags"].get("tunnel") != "yes"]
     order = {"path": 0, "minor": 1, "secondary": 2, "primary": 3, "motorway": 4}
     roads.sort(key=lambda r: order[r[1][0]])
-    for e, (colour, width) in roads:
+    for e, (colour, width, min_px) in roads:
         if colour != "path":
-            line(e, COLOURS["road_casing"], width + 2)
-    for e, (colour, width) in roads:
-        line(e, COLOURS[colour], width)
+            line(e, COLOURS["road_casing"], width + 2, min_px + 1.0)
+    for e, (colour, width, min_px) in roads:
+        line(e, COLOURS[colour], width, min_px)
 
     # 4. Railways. Tunnels are drawn faintly: the Tube is mostly underground and
     #    a bold line would give the station away, but a hint of it is fair.
@@ -340,9 +379,11 @@ def draw_map(elements: list[dict], lat: float, lon: float) -> Image.Image:
         t = e["tags"]
         if e["type"] == "way" and t.get("railway") in ("rail", "light_rail", "subway", "tram", "narrow_gauge"):
             if t.get("tunnel") == "yes":
-                line(e, COLOURS["rail_tunnel"], 3)
+                line(e, COLOURS["rail_tunnel"], 3, 1.0)
             else:
-                line(e, COLOURS["rail"], 4)
+                # Surface rail is one of the strongest locating features on
+                # these maps, so it gets a generous floor.
+                line(e, COLOURS["rail"], 4, 2.0)
 
     return img.resize((SIZE_PX, SIZE_PX), Image.LANCZOS)
 
@@ -410,7 +451,8 @@ def main() -> None:
         folder.mkdir(parents=True, exist_ok=True)
         for n, img in enumerate(levels, 1):
             path = folder / f"{n}.webp"
-            img.save(path, "WEBP", quality=WEBP_QUALITY, method=6)
+            quality = WEBP_QUALITY if n == len(levels) else WEBP_QUALITY_BLURRED
+            img.save(path, "WEBP", quality=quality, method=6)
             total_bytes += path.stat().st_size
         if args.contact_sheet:
             sets[s["slug"]] = levels
