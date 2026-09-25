@@ -36,3 +36,6 @@ data/cache/
 
 # Background render log (nohup python scripts/render_maps.py > render.log)
 render.log
+
+# Stale git lock files moved aside; safe to delete by hand.
+_to_delete/

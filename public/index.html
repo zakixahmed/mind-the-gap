@@ -77,6 +77,12 @@ h1 .bar {                      /* the roundel-ish bar through the title */
 
 /* ------------------------------------------------------------------ map -- */
 .map-frame {
+  /* How many metres across the rendered crop is — must match AREA_M in
+     scripts/render_maps.py. The scale bar's width is computed from it, so the
+     two can never silently disagree. */
+  --crop-m: 2500;
+  --scale-m: 500;
+
   position: relative;
   aspect-ratio: 1;
   /* Square, but never so tall that the search box falls below the fold on a
@@ -94,12 +100,101 @@ h1 .bar {                      /* the roundel-ish bar through the title */
   height: 100%;
   object-fit: cover;
   display: block;
-  /* Levels 1-3 are stored small on purpose (see ADR-009); let the browser
-     scale them smoothly rather than showing enlarged pixels. */
   image-rendering: auto;
   transition: opacity .25s ease;
 }
 .map-frame.swapping img { opacity: .35; }
+
+/* Round-1 players had no way to tell whether they were looking at 200 m or
+   2 km of city, which makes every shape on the map ambiguous — the same curve
+   is the Thames at one scale and an anonymous A-road at another. Both cues are
+   drawn in the UI rather than baked into the image, so they cost nothing in
+   file size and survive a re-render. */
+.map-scale {
+  --inset: 10px;
+  position: absolute;
+  left: var(--inset);
+  right: var(--inset);
+  bottom: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.map-scale .bar {
+  /* The bar has to measure against the *frame*, but its parent is inset from
+     both edges, so the insets are added back before taking the fraction.
+     Without this the bar is silently a few percent short — which is worse than
+     no scale bar at all, since a player would trust it. */
+  width: calc((100% + var(--inset) * 2) * var(--scale-m) / var(--crop-m));
+  height: 0;
+  border-bottom: 3px solid rgba(20, 22, 28, .78);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+}
+.map-scale .label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #14161c;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.map-north {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: #14161c;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* Every crop is drawn north-up, so a fixed arrow is honest. */
+.map-north::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  border: 4px solid transparent;
+  border-bottom-color: #14161c;
+  border-top-width: 0;
+}
+.map-north span { margin-top: 7px; }
+
+/* A hint that has been unlocked by a wrong guess but not yet turned over. */
+#hints li.locked {
+  background: none;
+  border: none;
+  padding: 0;
+  display: block;
+}
+.hint-reveal {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  font: inherit;
+  font-size: .9rem;
+  text-align: left;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+.hint-reveal:hover,
+.hint-reveal:focus-visible {
+  border-style: solid;
+  color: var(--text);
+}
+.hint-reveal .tap { font-size: .8rem; }
 
 /* The station is dead centre of every crop. Saying so costs nothing and
    saves the player wondering. */
@@ -411,8 +506,10 @@ footer a { color: var(--muted); }
 
   <main>
     <div class="map-frame" id="map-frame">
-      <img id="map" alt="A blurred map centred on the mystery station" src="" width="640" height="640">
+      <img id="map" alt="A blurred map centred on the mystery station" src="" width="896" height="896">
       <div class="centre-mark" aria-hidden="true"></div>
+      <div class="map-scale" aria-hidden="true"><span class="bar"></span><span class="label">500 m</span></div>
+      <div class="map-north" aria-hidden="true"><span>N</span></div>
     </div>
     <div class="map-caption">
       <span id="level-label">Blur level 1 of 6</span>
@@ -470,13 +567,14 @@ const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
 
 /** Mutable game state. */
 const state = {
-  stations: [], bySlug: new Map(), lines: {}, schedule: [], facts: {},
+  stations: [], bySlug: new Map(), lines: {}, schedule: [], facts: {}, landmarks: {},
   mode: "daily",          // "daily" | "practice"
   puzzleNumber: 0,        // daily only
   answer: null,
   guesses: [],
   status: "playing",      // "playing" | "won" | "lost"
   dailyResult: null,      // { guesses, status } kept while practising
+  revealed: [],           // indices of hints the player has chosen to turn over
   matches: [], highlighted: -1,
 };
 
@@ -576,7 +674,8 @@ function recordDaily() {
 
 function saveDaily() {
   if (state.mode !== "daily") return;
-  save(STORE.daily, { n: state.puzzleNumber, guesses: state.guesses, status: state.status });
+  save(STORE.daily, { n: state.puzzleNumber, guesses: state.guesses, status: state.status,
+                      revealed: state.revealed });
 }
 
 /* --------------------------------------------------------------- helpers -- */
@@ -622,12 +721,26 @@ function factFor(s) {
 
 /* ------------------------------------------------------------ the hints --- */
 
+/* Rebuilt for v0.2.0 after round-1 playtesting (docs/FEEDBACK.md, ADR-020).
+ *
+ * The old ladder was Zone, Line, Borough, Starts, Length. Its problem was that
+ * the first three only help a player who already carries the tube map in their
+ * head, and the last two are close to giving the answer away — so the ladder
+ * went from useless to too generous with nothing in between.
+ *
+ * "Nearby" is the rung that was missing: it helps you read the picture in
+ * front of you rather than recall a network diagram, so it sits second, where
+ * it can still change how you think about the map. The two name-shaped hints
+ * are merged into one rung to make room, which costs nothing — knowing the
+ * first letter and the length separately was never worth two guesses.
+ */
 const HINT_LADDER = [
   { label: "Zone", render: (s) => s.zones.length > 1 ? `Zones ${s.zones.join(" and ")}` : `Zone ${s.zones[0]}` },
+  { label: "Nearby", render: (s) => state.landmarks[s.slug]?.text || "Nothing notable within a mile" },
   { label: "Line", render: (s) => s.lines.map(lineChip).join("") },
   { label: "Borough", render: (s) => s.borough },
-  { label: "Starts", render: (s) => `The name starts with <strong>${s.name[0].toUpperCase()}</strong>` },
-  { label: "Length", render: (s) => `<strong>${s.name.replace(/[^a-zA-Z]/g, "").length}</strong> letters` },
+  { label: "Name", render: (s) =>
+      `Starts with <strong>${s.name[0].toUpperCase()}</strong> · <strong>${s.name.replace(/[^a-zA-Z]/g, "").length}</strong> letters` },
 ];
 
 /* ------------------------------------------------------------ rendering --- */
@@ -656,13 +769,32 @@ function renderMap() {
   if (level < MAX_GUESSES) new Image().src = `maps/${state.answer.slug}/${level + 1}.webp`;
 }
 
+/* A wrong guess *unlocks* a hint; it does not spend it. The player turns each
+ * one over when they want it, which keeps the choice — and the small pleasure
+ * of deciding you don't need help yet — with them rather than with the game.
+ * Once the round is over every hint is shown, since there is nothing left to
+ * protect. */
 function renderHints() {
-  const revealed = Math.min(state.guesses.length, HINT_LADDER.length);
+  const unlocked = Math.min(state.guesses.length, HINT_LADDER.length);
   els.hints.innerHTML = "";
-  for (let i = 0; i < revealed; i++) {
+  for (let i = 0; i < unlocked; i++) {
     const hint = HINT_LADDER[i];
     const li = document.createElement("li");
-    li.innerHTML = `<span class="label">${hint.label}</span><span>${hint.render(state.answer)}</span>`;
+    if (state.revealed.includes(i) || state.status !== "playing") {
+      li.innerHTML = `<span class="label">${hint.label}</span><span>${hint.render(state.answer)}</span>`;
+    } else {
+      li.className = "locked";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "hint-reveal";
+      btn.innerHTML = `<span class="label">${hint.label}</span><span class="tap">Tap to reveal</span>`;
+      btn.addEventListener("click", () => {
+        state.revealed.push(i);
+        saveDaily();
+        renderHints();
+      });
+      li.appendChild(btn);
+    }
     els.hints.appendChild(li);
   }
 }
@@ -846,6 +978,7 @@ function startPractice() {
   state.mode = "practice";
   state.answer = pick;
   state.guesses = [];
+  state.revealed = [];
   state.status = "playing";
   clearInterval(countdownTimer);
   els.input.value = "";
@@ -954,13 +1087,16 @@ function onKeyDown(e) {
 /* ----------------------------------------------------------------- boot --- */
 
 async function start() {
-  let stations, schedule, facts;
+  let stations, schedule, facts, landmarks;
   try {
-    [stations, schedule, facts] = await Promise.all([
+    [stations, schedule, facts, landmarks] = await Promise.all([
       fetch("data/stations.json").then((r) => r.json()),
       fetch("data/schedule.json").then((r) => r.json()),
       // Facts are a nicety, not a requirement: a missing file must not stop play.
       fetch("data/facts.json").then((r) => r.json()).catch(() => ({ facts: {} })),
+      // Landmarks are optional in exactly the same way facts are: a station
+      // with no entry simply shows a different line on that rung.
+      fetch("data/landmarks.json").then((r) => r.json()).catch(() => ({ landmarks: {} })),
     ]);
   } catch (err) {
     els.inputHint.textContent =
@@ -978,6 +1114,7 @@ async function start() {
   // never drift apart.
   state.launch = schedule.launch;
   state.facts = facts.facts || {};
+  state.landmarks = landmarks.landmarks || {};
 
   // Before launch day this would be zero or negative; show puzzle 1 instead.
   state.puzzleNumber = Math.max(1, puzzleNumberFor(state.launch, londonDate()));
@@ -989,6 +1126,7 @@ async function start() {
   if (saved && saved.n === state.puzzleNumber && Array.isArray(saved.guesses)) {
     state.guesses = saved.guesses.filter((slug) => state.bySlug.has(slug));
     state.status = saved.status === "won" || saved.status === "lost" ? saved.status : "playing";
+    if (Array.isArray(saved.revealed)) state.revealed = saved.revealed.filter((i) => Number.isInteger(i));
   }
 
   els.input.addEventListener("input", openSuggestions);
