@@ -92,6 +92,22 @@ def wants_relation(tags: dict) -> bool:
     )
 
 
+def check_is_pbf(path: Path) -> None:
+    """Fail early and clearly if a file is not actually a .osm.pbf.
+
+    Worth the eight lines: Geofabrik serves the ``-latest`` URLs as a 302, so
+    ``curl`` without ``-L`` writes a few hundred bytes of redirect HTML under a
+    .osm.pbf name. Left unchecked that produces an empty extract, then 272
+    empty caches, then a renderer reporting every station as uncached — three
+    steps away from the actual mistake.
+    """
+    head = path.read_bytes()[:64]
+    if b"OSMHeader" not in head:
+        kind = "an HTML page" if head.lstrip()[:1] in (b"<",) else "not a PBF"
+        sys.exit(f"{path} is {kind}, {path.stat().st_size:,} bytes.\n"
+                 f"Geofabrik redirects the download — fetch it with 'curl -L -O', not 'curl -O'.")
+
+
 def station_boxes() -> list[tuple[str, tuple[float, float, float, float]]]:
     """(slug, bbox) for every station, using render_maps' own box maths."""
     stations = json.loads(STATIONS_FILE.read_text())["stations"]
@@ -193,6 +209,9 @@ def extract(pbf_paths: list[Path]) -> None:
         print(f"  {way_pass.count:,} ways + {kept:,} relations in {time.time() - started:.0f}s")
 
     out.close()
+    if not written:
+        sys.exit("no features extracted — the .pbf files contain nothing this map draws, "
+                 "which almost certainly means they are not the extracts you meant")
     size = FEATURES_FILE.stat().st_size / 1024 / 1024
     print(f"\nwrote {FEATURES_FILE.relative_to(ROOT)} — {written:,} features, {size:.0f} MB")
 
@@ -316,6 +335,8 @@ def main() -> None:
         missing = [p for p in args.pbf if not p.exists()]
         if missing:
             sys.exit(f"not found: {missing}")
+        for path in args.pbf:
+            check_is_pbf(path)
         extract(args.pbf)
 
     slice_to_stations(args.overwrite)

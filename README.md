@@ -62,6 +62,12 @@ Chesham), `hertfordshire` (Watford, Rickmansworth, Moor Park) and `essex`
 (Epping, Theydon Bois, Loughton). The script extracts the union of every
 feature the map draws, then slices it per station into `data/raw/`.
 
+Use `curl -L`: the `-latest` URLs are a 302 to a dated file, and without `-L`
+you get a few hundred bytes of redirect HTML named `.osm.pbf`. Downloading the
+dated filename the redirect points at (`greater-london-260924.osm.pbf` rather
+than `-latest`) is what makes a rebuild genuinely reproducible — `-latest`
+means something different every week.
+
 It replaced a run against the Overpass API, which the wider 2.5 km crop made
 untenable: eight stations in 48 minutes, or roughly 27 hours for the full set,
 with most of that spent waiting on requests that returned 504. Public Overpass
