@@ -45,19 +45,35 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 python scripts/build_stations.py   # → data/stations.json       (~5 min, see below)
-python scripts/render_maps.py      # → public/maps/<slug>/1-6.webp
-python scripts/build_schedule.py   # → data/schedule.json       (instant, offline)
+
+# Map data. Download the extracts first — see below for which ones.
+python scripts/fetch_osm_local.py data/pbf/*.osm.pbf   # → data/raw/     (~10 min)
+python scripts/render_maps.py --offline                # → public/maps/<slug>/1-6.webp
+
+python scripts/build_landmarks.py  # → data/landmarks.json     (instant, offline)
+python scripts/build_schedule.py   # → data/schedule.json      (instant, offline)
 ```
 
-**`render_maps.py`** fetches the raw OpenStreetMap features around each station
-from the Overpass API and draws a label-free map, then writes six blur levels as
-WebP. Responses cache to `data/raw/` so re-tuning the cartography needs no
-network: `--offline` re-renders from cache, `--only slug,slug` does a few
-stations, `--contact-sheet` writes a 6-up review image. A full run is 272
-Overpass queries; the public instances are often busy, so it retries across
-three mirrors, skips anything it cannot fetch, and lists the failures at the end
-— run it again to fill the gaps. Budget an hour or more, and run it in the
-background: `nohup python scripts/render_maps.py > render.log 2>&1 &`.
+**`fetch_osm_local.py`** builds the OpenStreetMap cache from local extracts.
+Download these from [Geofabrik](https://download.geofabrik.de/europe/united-kingdom/england/)
+into `data/pbf/`: `greater-london` covers most of the network, and the
+Metropolitan and Central line outliers need `buckinghamshire` (Amersham,
+Chesham), `hertfordshire` (Watford, Rickmansworth, Moor Park) and `essex`
+(Epping, Theydon Bois, Loughton). The script extracts the union of every
+feature the map draws, then slices it per station into `data/raw/`.
+
+It replaced a run against the Overpass API, which the wider 2.5 km crop made
+untenable: eight stations in 48 minutes, or roughly 27 hours for the full set,
+with most of that spent waiting on requests that returned 504. Public Overpass
+rate-limits per IP, and 272 heavy queries is not a reasonable thing to ask of
+donated infrastructure. A local extract has no rate limit, needs no network
+during the run, and is reproducible — the same `.pbf` always yields the same
+maps. `render_maps.py` still has its Overpass path for filling a single gap.
+
+**`render_maps.py`** draws a label-free map around each station from that cache
+and writes six blur levels as WebP. Because the data is local, re-tuning the
+cartography is free: `--offline` re-renders from cache, `--only slug,slug` does
+a few stations, `--contact-sheet` writes a 6-up review image.
 
 **`build_schedule.py`** writes the 100-day order the daily puzzle follows,
 mixing famous and obscure stations with never three obscure in a row. Which

@@ -3,3 +3,4 @@
 requests==2.32.3   # TfL / tile HTTP calls (scripts/build_stations.py, scripts/render_maps.py)
 Pillow==10.4.0     # image stitching, cropping and Gaussian blur (scripts/render_maps.py)
 urllib3<2          # macOS system Python ships LibreSSL, which urllib3 2.x warns about on every run
+osmium==3.7.0       # read local .osm.pbf extracts (scripts/fetch_osm_local.py)

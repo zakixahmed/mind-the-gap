@@ -39,3 +39,6 @@ render.log
 
 # Stale git lock files moved aside; safe to delete by hand.
 _to_delete/
+
+# Geofabrik extracts — large, and reproducibly downloadable.
+data/pbf/
