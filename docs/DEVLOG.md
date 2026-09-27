@@ -4,6 +4,25 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-27 — Session 5: the 2.5 km re-render, and landmarks people have heard of
+
+**Built**
+- All 272 stations re-rendered at 2.5 km from the local Geofabrik extracts: 1,632 images, 40 MB.
+- `build_landmarks.py` rebuilt around its own extract of the .pbf files (ADR-024): Wikipedia-linked places ranked first, size counted for open spaces, nearest-edge distances, culverted rivers and roads dropped, plus `SKIP`, `RENAME` and a two-entry `OVERRIDES`. `data/landmarks.json` and `public/data/landmarks.json` committed for the first time: 271 of 272 stations have a hint.
+- Checked in a headless browser at 390 px: today's puzzle (Great Portland Street) reveals "The Regent's Park — just north-west" on the Nearby rung, no console errors.
+
+**Broke**
+- Friday's render drew 12 of 272 stations. Three of the four .pbf downloads were cut off partway: they had valid headers, so `check_is_pbf` passed them, and the extract failed silently further in. Re-downloading fixed it; the header check still does not catch truncation.
+- The first landmark review showed ADR-020 could only pick parks and water, because it read the render cache, which holds only what the map draws.
+- Two scoring bugs surfaced in review: a small-area penalty meant for pocket parks was marking down the London Eye, and the answer-leak test ignored two-letter words, so "The O2" counted as having no distinctive name and was rejected.
+- The Mac sandbox kills background jobs when a call ends, so the full render ran in two chunks with `--only`.
+
+**Next**
+- Re-take `docs/screenshots/` (they still show 1 km maps and the old hint ladder), tag `v0.2.0`, push and deploy.
+- Second round of friend feedback.
+- Phase 6: how-to-play modal, light mode, first-time walkthrough.
+- Make `fetch_osm_local.py` fail loudly on a truncated .pbf.
+
 ## 2026-09-25 — Session 4: round-1 feedback, and the start of v0.2.0
 
 The game went out to friends after the v0.1.0 deploy. The feedback was

@@ -76,24 +76,27 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
-### 2026-09-27 — full re-render at 2.5 km (step 1 of v0.2.0 done)
+### 2026-09-27 — after session 5 (re-render done, landmarks fixed)
 
-- Friday's offline render drew only 12 stations because three of the four Geofabrik
-  extracts were truncated downloads. Zack re-fetched them with `curl -L -o`; all four
-  now read cleanly with osmium.
-- `fetch_osm_local.py` → 637,413 features, 272 station caches. `render_maps.py --offline`
-  → 1,632 images, **40 MB** (was 15.9 MB at 1 km). Still under the 50 MB line from ADR-003,
-  so the maps stay in the repo, but it is closer than it was.
-- Spot-checked Baker Street, Amersham, Epping, Watford, Westminster, Canary Wharf at all
-  six levels: outside-London stations are complete to the edge.
-- Follow-up worth doing: `check_is_pbf` only checks the header, so a truncated download
-  passes it. The extract should fail loudly on "unexpected EOF".
+**Done**
+- All 272 stations re-rendered at 2.5 km (1,632 images, 40 MB — under ADR-003's 50 MB line).
+  Friday's partial run was caused by three truncated .pbf downloads; Zack re-fetched them.
+- Landmark hints rebuilt (ADR-024): own extract of the .pbf files, Wikipedia-linked places
+  ranked first. Reviewed all 272 by hand; `SKIP`, `RENAME` and `OVERRIDES` in the script hold
+  the judgement calls. 271/272 have a hint (Chigwell has none). Browser-checked at 390 px.
+- DECISIONS (ADR-024), DEVLOG, CHANGELOG updated.
 
-**Next**
-1. `python scripts/build_landmarks.py --show` and read the output; fill `OVERRIDES`.
-2. Re-take `docs/screenshots/`.
-3. Tag `v0.2.0`, deploy, second round of friend feedback.
-4. Phase 6: how-to-play modal, light mode, first-time walkthrough.
+**Next — start here**
+1. Re-take `docs/screenshots/` — they still show 1 km maps and the old hint ladder.
+2. Tag `v0.2.0`; Zack pushes (`main` is ahead of origin) and the Pages workflow deploys.
+3. Second round of feedback from the same friends.
+4. Phase 6: how-to-play modal (first visit), light mode toggle, first-time walkthrough.
+5. Small fix: `fetch_osm_local.py` should fail loudly on a truncated .pbf, not only an HTML one.
+
+**Notes**
+- To rebuild landmarks: `python scripts/build_landmarks.py --extract data/pbf/*.osm.pbf`, then
+  `--show` to review, then no flags to write. Add obscure picks to `SKIP`, not `OVERRIDES`,
+  so the next pick keeps a computed distance and direction.
 
 ### 2026-09-25 — after session 4 (round-1 feedback; v0.2.0 in progress)
 

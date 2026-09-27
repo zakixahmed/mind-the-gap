@@ -13,6 +13,8 @@ of player feedback. See `docs/FEEDBACK.md`.
 ### Added
 - A "nearby landmark" hint: the nearest notable place, with a rough distance and
   direction, derived from OpenStreetMap by `scripts/build_landmarks.py`.
+  Landmarks are ranked by whether OpenStreetMap links them to Wikipedia, so the
+  hint names places people recognise rather than the nearest pocket park.
 - A scale bar and north cue on the map, so the crop can be read at a known size.
 - `docs/FEEDBACK.md`, recording each round of playtesting and what changed
   because of it.
