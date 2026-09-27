@@ -7,7 +7,7 @@ Think Wordle meets Worldle, for London.
 **▶ Play it: [zakixahmed.github.io/mind-the-gap](https://zakixahmed.github.io/mind-the-gap/)**
 
 <p>
-  <img src="docs/screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with zone and line hints revealed" width="300">
+  <img src="docs/screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with the zone and nearby-landmark hints revealed" width="300">
   <img src="docs/screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
 </p>
 
@@ -136,7 +136,7 @@ Actions**, then push to `main`.
 
 - **Code:** [MIT](LICENSE).
 - **Station data:** [TfL Unified API](https://api.tfl.gov.uk) under the [TfL open data licence](https://tfl.gov.uk/info-for/open-data-users/) — *Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights 2019.* Boroughs from [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim — *© OpenStreetMap contributors, ODbL 1.0.*
-- **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data retrieved via the [Overpass API](https://overpass-api.de) — *© OpenStreetMap contributors*, ODbL. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
+- **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data, read from [Geofabrik](https://download.geofabrik.de) regional extracts (v0.1.0 used the [Overpass API](https://overpass-api.de)) — *© OpenStreetMap contributors*, ODbL. The nearby-landmark hints come from the same data. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
 
 ## Roadmap
 
@@ -147,6 +147,7 @@ Actions**, then push to `main`.
 - [x] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule, practice mode
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
 - [x] Phase 7 — deployment, real screenshots, `v0.1.0`
+- [x] `v0.2.0` — the legibility pass after round-1 feedback: 2.5 km maps, a softer blur curve, landmark hints, tap-to-reveal hints (see [`docs/FEEDBACK.md`](docs/FEEDBACK.md))
 
 **Later, not in MVP:** archive mode for past puzzles, hard mode, distance-and-direction feedback on wrong guesses.
 

@@ -86,12 +86,15 @@ _Updated at the end of every session. Newest first._
   the judgement calls. 271/272 have a hint (Chigwell has none). Browser-checked at 390 px.
 - DECISIONS (ADR-024), DEVLOG, CHANGELOG updated.
 
+- Screenshots re-taken (puzzle #1, Waterloo, at 390 px and 1000 px) and `v0.2.0` tagged.
+
 **Next — start here**
-1. Re-take `docs/screenshots/` — they still show 1 km maps and the old hint ladder.
-2. Tag `v0.2.0`; Zack pushes (`main` is ahead of origin) and the Pages workflow deploys.
-3. Second round of feedback from the same friends.
-4. Phase 6: how-to-play modal (first visit), light mode toggle, first-time walkthrough.
-5. Small fix: `fetch_osm_local.py` should fail loudly on a truncated .pbf, not only an HTML one.
+1. Zack pushes `main` and the `v0.2.0` tag; the Pages workflow deploys.
+2. Second round of feedback from the same friends; record it in `docs/FEEDBACK.md`.
+3. Phase 6: how-to-play modal (first visit), light mode toggle, first-time walkthrough.
+   Also: on desktop the "N guesses left" label sits under the map's right edge rather than
+   the column's — align it with the rest of the layout.
+4. Small fix: `fetch_osm_local.py` should fail loudly on a truncated .pbf, not only an HTML one.
 
 **Notes**
 - To rebuild landmarks: `python scripts/build_landmarks.py --extract data/pbf/*.osm.pbf`, then

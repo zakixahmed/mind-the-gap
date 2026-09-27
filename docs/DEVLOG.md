@@ -17,8 +17,10 @@ One entry per working session, newest at the top. Each entry covers what was bui
 - Two scoring bugs surfaced in review: a small-area penalty meant for pocket parks was marking down the London Eye, and the answer-leak test ignored two-letter words, so "The O2" counted as having no distinctive name and was rejected.
 - The Mac sandbox kills background jobs when a call ends, so the full render ran in two chunks with `--only`.
 
+- Screenshots re-taken from puzzle #1 (Waterloo) with the browser clock pinned to launch day, so the README shows the 2.5 km map and the Nearby hint. CHANGELOG cut as 0.2.0; tagged `v0.2.0`.
+
 **Next**
-- Re-take `docs/screenshots/` (they still show 1 km maps and the old hint ladder), tag `v0.2.0`, push and deploy.
+- Push `main` and the tag; the Pages workflow deploys.
 - Second round of friend feedback.
 - Phase 6: how-to-play modal, light mode, first-time walkthrough.
 - Make `fetch_osm_local.py` fail loudly on a truncated .pbf.

@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Version 0.2.0 in progress — the legibility pass, in response to the first round
-of player feedback. See `docs/FEEDBACK.md`.
+## [0.2.0] — 2026-09-27
+
+The legibility pass, in response to the first round of player feedback
+("too hard to guess"). See `docs/FEEDBACK.md`.
 
 ### Added
 - A "nearby landmark" hint: the nearest notable place, with a rough distance and
@@ -61,5 +63,6 @@ of player feedback. See `docs/FEEDBACK.md`.
 - Placeholder `public/index.html`.
 - Documentation skeleton: README, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/DEVLOG.md`.
 
-[Unreleased]: https://github.com/zakixahmed/mind-the-gap/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/zakixahmed/mind-the-gap/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/zakixahmed/mind-the-gap/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/zakixahmed/mind-the-gap/releases/tag/v0.1.0
