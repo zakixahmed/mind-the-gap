@@ -76,6 +76,25 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-27 — full re-render at 2.5 km (step 1 of v0.2.0 done)
+
+- Friday's offline render drew only 12 stations because three of the four Geofabrik
+  extracts were truncated downloads. Zack re-fetched them with `curl -L -o`; all four
+  now read cleanly with osmium.
+- `fetch_osm_local.py` → 637,413 features, 272 station caches. `render_maps.py --offline`
+  → 1,632 images, **40 MB** (was 15.9 MB at 1 km). Still under the 50 MB line from ADR-003,
+  so the maps stay in the repo, but it is closer than it was.
+- Spot-checked Baker Street, Amersham, Epping, Watford, Westminster, Canary Wharf at all
+  six levels: outside-London stations are complete to the edge.
+- Follow-up worth doing: `check_is_pbf` only checks the header, so a truncated download
+  passes it. The extract should fail loudly on "unexpected EOF".
+
+**Next**
+1. `python scripts/build_landmarks.py --show` and read the output; fill `OVERRIDES`.
+2. Re-take `docs/screenshots/`.
+3. Tag `v0.2.0`, deploy, second round of friend feedback.
+4. Phase 6: how-to-play modal, light mode, first-time walkthrough.
+
 ### 2026-09-25 — after session 4 (round-1 feedback; v0.2.0 in progress)
 
 The game was shared with friends after the v0.1.0 deploy and came back with one
