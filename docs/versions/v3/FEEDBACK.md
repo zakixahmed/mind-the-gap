@@ -17,6 +17,26 @@ doesn't know London may not know the names at all, and the buttons are what
 lets them play. One reply so far; see what the non-Londoners say before
 deciding.
 
+**Tester 2 — a friend.** Likes it, but wants more to go on from the start:
+
+> The game is good, but a little more information on the map would make the
+> guesses easier. Hints such as notable places or stops along the route would
+> be helpful. That said, I did notice that you get additional clues as you
+> make more attempts, such as total number of stops.
+
+Two things in this are worth noting. The landmark hints already exist but only
+unlock after a wrong guess, so a player who gets the first guess wrong has
+already paid for them. And the station count is not a clue during play: it is
+shown on the result card after the answer, so it reads as information that
+arrived too late.
+
+## Early read
+
+The two replies pull in opposite directions: a Londoner finds it too easy, the
+other tester wants more help. That is the gap between the two audiences
+showing, not a contradiction — and it points at letting each player choose how
+much help to take rather than picking one difficulty for everyone.
+
 ## What changed going into this round
 
 Round 2 said the station game only works if you already know London. v3 changes
