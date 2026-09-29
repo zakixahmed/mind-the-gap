@@ -1,6 +1,21 @@
 # Feedback on v3 (`v0.3.0`)
 
-_Round 3 of playtesting. Nothing yet — this file fills in as responses come in._
+_Round 3 of playtesting, from 29 September 2026. Shared as an Instagram story
+("I made a puzzle game — give it a go and let me know your thoughts") with a
+link sticker. Responses are added here as they come in._
+
+## What was said
+
+**Tester 1 — lives in London.** The eleven answer buttons make it too easy:
+
+> Don't keep the options like that, make it like a text box where I can type
+> the line name. Having the options wide open makes it easier.
+
+Worth weighing against who v3 is for: a Londoner already knows all eleven
+names, so the buttons give them little beyond convenience — but a player who
+doesn't know London may not know the names at all, and the buttons are what
+lets them play. One reply so far; see what the non-Londoners say before
+deciding.
 
 ## What changed going into this round
 
