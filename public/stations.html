@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mind the Gap — Stations (hard mode)</title>
+<meta name="description" content="Hard mode: guess the London Underground station from a blurred map. A new puzzle every day, plus unlimited practice rounds.">
+<meta name="theme-color" content="#0f1115">
+<style>
+/* ===========================================================================
+   Theme. Dark by default; the light toggle lands in phase 6, which is why
+   every colour is a variable rather than a literal.
+   ========================================================================= */
+:root {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1e222b;
+  --border: #2b313c;
+  --text: #e9ecf1;
+  --muted: #98a0ad;
+  --accent: #e32017;          /* Central line red */
+  --correct: #2ea043;
+  --near: #c9a227;
+  --far: #4a5261;
+  --radius: 12px;
+  --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+
+/* Any element with its own `display` beats the browser's `[hidden]` rule, so
+   toggling .hidden silently does nothing. Make the attribute authoritative. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+/* --------------------------------------------------------------- header -- */
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+h1 {
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+  font-weight: 700;
+}
+h1 .bar {                      /* the roundel-ish bar through the title */
+  color: var(--accent);
+  font-weight: 800;
+}
+.puzzle-no {
+  font-size: .8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ map -- */
+.map-frame {
+  /* How many metres across the rendered crop is — must match AREA_M in
+     scripts/render_maps.py. The scale bar's width is computed from it, so the
+     two can never silently disagree. */
+  --crop-m: 2500;
+  --scale-m: 500;
+
+  position: relative;
+  aspect-ratio: 1;
+  /* Square, but never so tall that the search box falls below the fold on a
+     phone — the whole loop has to be reachable without scrolling. */
+  width: min(100%, 52vh);
+  margin-inline: auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.map-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: auto;
+  transition: opacity .25s ease;
+}
+.map-frame.swapping img { opacity: .35; }
+
+/* Round-1 players had no way to tell whether they were looking at 200 m or
+   2 km of city, which makes every shape on the map ambiguous — the same curve
+   is the Thames at one scale and an anonymous A-road at another. Both cues are
+   drawn in the UI rather than baked into the image, so they cost nothing in
+   file size and survive a re-render. */
+.map-scale {
+  --inset: 10px;
+  position: absolute;
+  left: var(--inset);
+  right: var(--inset);
+  bottom: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.map-scale .bar {
+  /* The bar has to measure against the *frame*, but its parent is inset from
+     both edges, so the insets are added back before taking the fraction.
+     Without this the bar is silently a few percent short — which is worse than
+     no scale bar at all, since a player would trust it. */
+  width: calc((100% + var(--inset) * 2) * var(--scale-m) / var(--crop-m));
+  height: 0;
+  border-bottom: 3px solid rgba(20, 22, 28, .78);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+}
+.map-scale .label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #14161c;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.map-north {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: #14161c;
+  background: rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* Every crop is drawn north-up, so a fixed arrow is honest. */
+.map-north::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  border: 4px solid transparent;
+  border-bottom-color: #14161c;
+  border-top-width: 0;
+}
+.map-north span { margin-top: 7px; }
+
+/* A hint that has been unlocked by a wrong guess but not yet turned over. */
+#hints li.locked {
+  background: none;
+  border: none;
+  padding: 0;
+  display: block;
+}
+.hint-reveal {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  font: inherit;
+  font-size: .9rem;
+  text-align: left;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+.hint-reveal:hover,
+.hint-reveal:focus-visible {
+  border-style: solid;
+  color: var(--text);
+}
+.hint-reveal .tap { font-size: .8rem; }
+
+/* The station is dead centre of every crop. Saying so costs nothing and
+   saves the player wondering. */
+.centre-mark {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 2px solid rgba(227, 32, 23, .9);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .55);
+  pointer-events: none;
+}
+.centre-mark::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 4px; height: 4px; margin: -2px 0 0 -2px;
+  background: rgba(227, 32, 23, .9);
+  border-radius: 50%;
+}
+
+.map-caption {
+  width: min(100%, 52vh);
+  margin-inline: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 8px 2px 0;
+}
+
+/* ---------------------------------------------------------------- hints -- */
+#hints {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+#hints li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: .9rem;
+  animation: pop .22s ease;
+}
+#hints .label {
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  min-width: 68px;
+  flex-shrink: 0;
+}
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Line names are shown in their own colours — it is a strong, familiar cue. */
+.line-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 600;
+  margin: 0 4px 4px 0;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- guesses -- */
+#guesses {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+#guesses li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: var(--surface);
+  font-size: .95rem;
+  min-height: 42px;
+}
+#guesses li.empty {
+  background: transparent;
+  border-style: dashed;
+  opacity: .35;
+  min-height: 34px;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.dot {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--far);
+}
+.dot.correct { background: var(--correct); }
+.dot.near    { background: var(--near); }
+.guess-note {
+  margin-left: auto;
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- search -- */
+.search {
+  position: relative;
+  margin-top: 18px;
+}
+#guess-input {
+  width: 100%;
+  padding: 13px 14px;
+  font-size: 1rem;              /* 16px min, or iOS zooms the page on focus */
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+#guess-input:focus { border-color: var(--accent); }
+#guess-input:disabled { opacity: .5; }
+
+/* On a phone the on-screen keyboard covers everything under the input, so the
+   list opens upward. On a wider screen there is room below, and opening upward
+   would cover the map — which the player needs to see while choosing. */
+#suggestions {
+  position: absolute;
+  left: 0; right: 0; bottom: calc(100% + 6px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  max-height: min(320px, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* scrolling the list shouldn't scroll the page */
+  z-index: 20;
+  padding: 4px;
+  margin: 0;
+  list-style: none;
+}
+#suggestions li {
+  padding: 10px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: .95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#suggestions li[aria-selected="true"], #suggestions li:hover { background: #2a303c; }
+#suggestions .rail {
+  width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0;
+}
+.hint-text {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 8px 2px 0;
+  min-height: 1.2em;
+}
+
+/* ------------------------------------------------------------ end screen -- */
+#endscreen {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 16px;
+  animation: pop .3s ease;
+}
+#endscreen h2 { margin: 0 0 4px; font-size: 1.1rem; }
+#endscreen .answer { font-size: 1.45rem; font-weight: 700; margin: 2px 0 10px; }
+#endscreen p { margin: 0 0 12px; font-size: .92rem; color: #cfd5de; }
+#endscreen a.osm {
+  display: inline-block;
+  font-size: .85rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+#endscreen a.osm:hover { border-color: var(--accent); }
+
+
+/* --------------------------------------------------- end screen actions -- */
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.btn {
+  font: inherit;
+  font-size: .87rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; font-weight: 500; }
+
+/* ---------------------------------------------------------------- stats -- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.stat { text-align: center; }
+.stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.dist { margin-top: 12px; display: grid; gap: 3px; }
+.dist-row { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
+.dist-n { color: var(--muted); width: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.dist-bar {
+  background: var(--far);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 1px 7px;
+  text-align: right;
+  min-width: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.dist-bar.mine { background: var(--correct); }
+
+.countdown {
+  margin-top: 14px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.countdown span { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.practice-note { font-size: .8rem; color: var(--muted); margin: 10px 0 0; }
+
+/* ----------------------------------------------------------- mode badge -- */
+#mode-badge {
+  display: inline-block;
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+/* ------------------------------------------------------------ mode link -- */
+/* Since v3 the line game is the front page and this is its hard mode. */
+.mode-link {
+  display: block;
+  margin: -8px 0 14px;
+  font-size: .8rem;
+  color: var(--muted);
+}
+.mode-link a { color: var(--text); }
+
+/* --------------------------------------------------------------- footer -- */
+footer {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: .72rem;
+  color: var(--muted);
+}
+footer a { color: var(--muted); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Desktop gets a slightly larger board, but the layout stays one column:
+   the game is a vertical sequence and splitting it would only add distance
+   between the map and the input. */
+@media (min-width: 720px) {
+  .wrap { max-width: 620px; padding-top: 28px; }
+  h1 { font-size: 1.6rem; }
+  #suggestions { bottom: auto; top: calc(100% + 6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Mind the <span class="bar">Gap</span><span id="mode-badge" hidden>Practice</span></h1>
+    <div class="puzzle-no" id="puzzle-no">Puzzle #1</div>
+  </header>
+  <p class="mode-link">Hard mode: guess the <em>station</em>. <a href="./">← Back to the line game</a></p>
+
+  <main>
+    <div class="map-frame" id="map-frame">
+      <img id="map" alt="A blurred map centred on the mystery station" src="" width="896" height="896">
+      <div class="centre-mark" aria-hidden="true"></div>
+      <div class="map-scale" aria-hidden="true"><span class="bar"></span><span class="label">500 m</span></div>
+      <div class="map-north" aria-hidden="true"><span>N</span></div>
+    </div>
+    <div class="map-caption">
+      <span id="level-label">Blur level 1 of 6</span>
+      <span id="remaining">6 guesses left</span>
+    </div>
+
+    <ul id="hints" aria-label="Hints"></ul>
+    <ol id="guesses" aria-label="Your guesses"></ol>
+
+    <div class="search" id="search">
+      <ul id="suggestions" role="listbox" aria-label="Station suggestions" hidden></ul>
+      <label for="guess-input" class="sr-only">Guess a station</label>
+      <input id="guess-input" type="text" role="combobox" aria-expanded="false"
+             aria-controls="suggestions" aria-autocomplete="list" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false"
+             placeholder="Type a station name…">
+    </div>
+    <p class="hint-text" id="input-hint">Tap to browse all stations, or type to narrow it down.</p>
+
+    <section id="endscreen" hidden aria-live="polite"></section>
+  </main>
+
+  <footer>
+    Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors,
+    <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL</a>.
+    Station data © Transport for London — Powered by TfL Open Data.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   Mind the Gap — game logic.
+
+   Two modes (ADR-013):
+     daily    — one puzzle a day, the same for everyone, counts towards stats,
+                shareable, resumes if you reload.
+     practice — unlimited random stations, no stats, no sharing.
+   ========================================================================= */
+
+const MAX_GUESSES = 6;
+
+const STORE = { stats: "mtg:stats", daily: "mtg:daily", recent: "mtg:recent" };
+
+/** Official TfL line colours — used for hint chips and suggestion bars. */
+const LINE_COLOURS = {
+  "bakerloo": "#B36305", "central": "#E32017", "circle": "#FFD300",
+  "district": "#00782A", "hammersmith-city": "#F3A9BB", "jubilee": "#A0A5A9",
+  "metropolitan": "#9B0056", "northern": "#000000", "piccadilly": "#003688",
+  "victoria": "#0098D4", "waterloo-city": "#95CDBA",
+};
+
+const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
+
+/** Mutable game state. */
+const state = {
+  stations: [], bySlug: new Map(), lines: {}, schedule: [], facts: {}, landmarks: {},
+  mode: "daily",          // "daily" | "practice"
+  puzzleNumber: 0,        // daily only
+  answer: null,
+  guesses: [],
+  status: "playing",      // "playing" | "won" | "lost"
+  dailyResult: null,      // { guesses, status } kept while practising
+  revealed: [],           // indices of hints the player has chosen to turn over
+  matches: [], highlighted: -1,
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* Element cache: {property: elementId}. Spelled out rather than derived from
+   the ids, so a rename in the markup fails loudly here instead of leaving an
+   undefined lying around. */
+const els = {};
+for (const [prop, id] of Object.entries({
+  map: "map", mapFrame: "map-frame", levelLabel: "level-label", remaining: "remaining",
+  hints: "hints", guesses: "guesses", input: "guess-input", suggestions: "suggestions",
+  inputHint: "input-hint", endscreen: "endscreen", puzzleNo: "puzzle-no",
+  modeBadge: "mode-badge", search: "search",
+})) {
+  els[prop] = $(id);
+  if (!els[prop]) console.error(`Missing element #${id}`);
+}
+
+/* ------------------------------------------------------- dates & seeding -- */
+
+/** Today's date in London as "YYYY-MM-DD", regardless of the visitor's timezone. */
+function londonDate(when = new Date()) {
+  // en-CA formats as YYYY-MM-DD, which sorts and parses cleanly.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(when);
+}
+
+/** Whole days between two "YYYY-MM-DD" strings. */
+function daysBetween(fromISO, toISO) {
+  // Parsed as UTC midnights, so the arithmetic never meets a DST transition:
+  // comparing calendar dates is exactly what we want, not elapsed time.
+  const [y1, m1, d1] = fromISO.split("-").map(Number);
+  const [y2, m2, d2] = toISO.split("-").map(Number);
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+}
+
+/** Puzzle number for a London date. Day 1 is the launch date. */
+function puzzleNumberFor(launchISO, dateISO) {
+  return daysBetween(launchISO, dateISO) + 1;
+}
+
+/** Milliseconds until the London date next changes, i.e. until the next puzzle.
+ *
+ *  Found by bisection rather than by adding 24 hours: on the two days a year
+ *  when the clocks change, "tomorrow midnight" is 23 or 25 hours away, and
+ *  every offset-arithmetic version of this is wrong twice a year.
+ */
+function msUntilNextLondonDay() {
+  const now = Date.now();
+  const today = londonDate(new Date(now));
+  let lo = now, hi = now + 26 * 3600 * 1000;
+  while (hi - lo > 500) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (londonDate(new Date(mid)) === today) lo = mid; else hi = mid;
+  }
+  return hi - now;
+}
+
+/* ----------------------------------------------------------- local store -- */
+
+/* Every read is defensive: localStorage throws in private windows on some
+   browsers, and a half-written value should never stop the game loading. */
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* full or blocked */ }
+}
+
+function blankStats() {
+  return { played: 0, wins: 0, streak: 0, maxStreak: 0, lastPlayed: null, dist: [0, 0, 0, 0, 0, 0] };
+}
+
+/** Fold the finished daily game into the saved stats, exactly once. */
+function recordDaily() {
+  const stats = load(STORE.stats, blankStats());
+  if (stats.lastPlayed === state.puzzleNumber) return;   // already counted
+
+  stats.played += 1;
+  if (state.status === "won") {
+    stats.wins += 1;
+    stats.dist[state.guesses.length - 1] += 1;
+    // A streak survives only if yesterday's puzzle was the one before this.
+    stats.streak = stats.lastPlayed === state.puzzleNumber - 1 ? stats.streak + 1 : 1;
+    stats.maxStreak = Math.max(stats.maxStreak, stats.streak);
+  } else {
+    stats.streak = 0;
+  }
+  stats.lastPlayed = state.puzzleNumber;
+  save(STORE.stats, stats);
+}
+
+function saveDaily() {
+  if (state.mode !== "daily") return;
+  save(STORE.daily, { n: state.puzzleNumber, guesses: state.guesses, status: state.status,
+                      revealed: state.revealed });
+}
+
+/* --------------------------------------------------------------- helpers -- */
+
+/** Fold case, accents and punctuation so "St. John's Wood" matches "st johns". */
+function normalise(text) {
+  return text.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function lineName(id) {
+  return state.lines[id] || id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/* Several line colours are pale — Circle yellow, Hammersmith & City pink,
+   Jubilee grey, Waterloo & City turquoise — and white text on them is close to
+   unreadable. Pick the text colour from the background's luminance instead of
+   keeping a list in sync by hand. */
+function readableOn(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.55 ? "#101216" : "#ffffff";
+}
+
+function lineChip(id) {
+  const colour = LINE_COLOURS[id] || "#555555";
+  return `<span class="line-chip" style="background:${colour};color:${readableOn(colour)}">${lineName(id)}</span>`;
+}
+
+function listWords(items) {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+/** The fact for a station, or a true sentence assembled from its own record. */
+function factFor(s) {
+  if (state.facts[s.slug]) return state.facts[s.slug];
+  const zones = s.zones.length > 1 ? `zones ${listWords(s.zones.map(String))}` : `zone ${s.zones[0]}`;
+  const lines = listWords(s.lines.map(lineName));
+  return `${s.name} is in ${zones}, in ${s.borough}, and is served by the ${lines} line${s.lines.length > 1 ? "s" : ""}.`;
+}
+
+/* ------------------------------------------------------------ the hints --- */
+
+/* Rebuilt for v0.2.0 after round-1 playtesting (docs/versions/v1/FEEDBACK.md, ADR-020).
+ *
+ * The old ladder was Zone, Line, Borough, Starts, Length. Its problem was that
+ * the first three only help a player who already carries the tube map in their
+ * head, and the last two are close to giving the answer away — so the ladder
+ * went from useless to too generous with nothing in between.
+ *
+ * "Nearby" is the rung that was missing: it helps you read the picture in
+ * front of you rather than recall a network diagram, so it sits second, where
+ * it can still change how you think about the map. The two name-shaped hints
+ * are merged into one rung to make room, which costs nothing — knowing the
+ * first letter and the length separately was never worth two guesses.
+ */
+const HINT_LADDER = [
+  { label: "Zone", render: (s) => s.zones.length > 1 ? `Zones ${s.zones.join(" and ")}` : `Zone ${s.zones[0]}` },
+  { label: "Nearby", render: (s) => state.landmarks[s.slug]?.text || "Nothing notable within a mile" },
+  { label: "Line", render: (s) => s.lines.map(lineChip).join("") },
+  { label: "Borough", render: (s) => s.borough },
+  { label: "Name", render: (s) =>
+      `Starts with <strong>${s.name[0].toUpperCase()}</strong> · <strong>${s.name.replace(/[^a-zA-Z]/g, "").length}</strong> letters` },
+];
+
+/* ------------------------------------------------------------ rendering --- */
+
+function currentLevel() {
+  if (state.status !== "playing") return MAX_GUESSES;
+  return Math.min(state.guesses.length + 1, MAX_GUESSES);
+}
+
+function renderMap() {
+  const level = currentLevel();
+  const next = `maps/${state.answer.slug}/${level}.webp`;
+  if (els.map.getAttribute("src") !== next) {
+    // Fade out, swap once the new file has decoded, fade back in — without the
+    // wait the sharper level appears half-loaded and reads as a glitch.
+    els.mapFrame.classList.add("swapping");
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      els.map.src = next;
+      els.mapFrame.classList.remove("swapping");
+    };
+    img.src = next;
+  }
+  els.levelLabel.textContent = `Blur level ${level} of ${MAX_GUESSES}`;
+  // Warm the next level so the swap after a wrong guess is instant.
+  if (level < MAX_GUESSES) new Image().src = `maps/${state.answer.slug}/${level + 1}.webp`;
+}
+
+/* A wrong guess *unlocks* a hint; it does not spend it. The player turns each
+ * one over when they want it, which keeps the choice — and the small pleasure
+ * of deciding you don't need help yet — with them rather than with the game.
+ * Once the round is over every hint is shown, since there is nothing left to
+ * protect. */
+function renderHints() {
+  const unlocked = Math.min(state.guesses.length, HINT_LADDER.length);
+  els.hints.innerHTML = "";
+  for (let i = 0; i < unlocked; i++) {
+    const hint = HINT_LADDER[i];
+    const li = document.createElement("li");
+    if (state.revealed.includes(i) || state.status !== "playing") {
+      li.innerHTML = `<span class="label">${hint.label}</span><span>${hint.render(state.answer)}</span>`;
+    } else {
+      li.className = "locked";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "hint-reveal";
+      btn.innerHTML = `<span class="label">${hint.label}</span><span class="tap">Tap to reveal</span>`;
+      btn.addEventListener("click", () => {
+        state.revealed.push(i);
+        saveDaily();
+        renderHints();
+      });
+      li.appendChild(btn);
+    }
+    els.hints.appendChild(li);
+  }
+}
+
+/** 🟩 correct · 🟨 shares a line, or one stop away · ⬛ neither. */
+function verdict(slug) {
+  if (slug === state.answer.slug) return "correct";
+  const guess = state.bySlug.get(slug);
+  const sharesLine = guess.lines.some((l) => state.answer.lines.includes(l));
+  return (sharesLine || state.answer.adjacent.includes(slug)) ? "near" : "far";
+}
+
+const VERDICT_NOTE = { correct: "", near: "same line or next door", far: "not close" };
+
+function renderGuesses() {
+  els.guesses.innerHTML = "";
+  // Only the guesses actually made, plus one slim placeholder. Drawing all six
+  // empty rows up front pushed the search box below the fold on a phone.
+  for (const slug of state.guesses) {
+    const v = verdict(slug);
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="dot ${v}"></span><span>${state.bySlug.get(slug).name}</span>` +
+                   `<span class="guess-note">${VERDICT_NOTE[v]}</span>`;
+    els.guesses.appendChild(li);
+  }
+  if (state.status === "playing") {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = `Guess ${state.guesses.length + 1} of ${MAX_GUESSES}`;
+    els.guesses.appendChild(li);
+  }
+  const left = MAX_GUESSES - state.guesses.length;
+  els.remaining.textContent = state.status !== "playing" ? "" : `${left} guess${left === 1 ? "" : "es"} left`;
+}
+
+function statsMarkup() {
+  const stats = load(STORE.stats, blankStats());
+  const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+  const most = Math.max(1, ...stats.dist);
+  const rows = stats.dist.map((count, i) => {
+    const mine = state.mode === "daily" && state.status === "won" && state.guesses.length === i + 1;
+    return `<div class="dist-row">
+      <span class="dist-n">${i + 1}</span>
+      <span class="dist-bar${mine ? " mine" : ""}" style="width:${Math.max(6, (count / most) * 100)}%">${count}</span>
+    </div>`;
+  }).join("");
+  return `
+    <div class="stats">
+      <div class="stat"><b>${stats.played}</b><span>played</span></div>
+      <div class="stat"><b>${winPct}%</b><span>won</span></div>
+      <div class="stat"><b>${stats.streak}</b><span>streak</span></div>
+      <div class="stat"><b>${stats.maxStreak}</b><span>best</span></div>
+    </div>
+    <div class="dist">${rows}</div>`;
+}
+
+function renderEnd() {
+  if (state.status === "playing") { els.endscreen.hidden = true; return; }
+  const s = state.answer;
+  const won = state.status === "won";
+  const n = state.guesses.length;
+  const heading = won
+    ? (n === 1 ? "First guess. Extraordinary." : `Got it in ${n}.`)
+    : "Out of guesses.";
+
+  const daily = state.mode === "daily";
+  els.endscreen.innerHTML = `
+    <h2>${heading}</h2>
+    <div class="answer">${s.name}</div>
+    <p>${factFor(s)}</p>
+    <div class="end-actions">
+      <a class="btn ghost" target="_blank" rel="noopener"
+         href="https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lon}#map=16/${s.lat}/${s.lon}">See it on OpenStreetMap</a>
+      ${daily ? `<button class="btn primary" id="share-btn">Share result</button>` : ""}
+      <button class="btn" id="practice-btn">${daily ? "Play a practice round" : "Another practice round"}</button>
+      ${!daily && state.dailyResult ? `<button class="btn ghost" id="back-btn">Back to today's puzzle</button>` : ""}
+    </div>
+    ${daily ? statsMarkup() : `<p class="practice-note">Practice rounds don't count towards your stats.</p>`}
+    ${daily ? `<div class="countdown">Next puzzle in <span id="countdown">…</span></div>` : ""}`;
+  els.endscreen.hidden = false;
+
+  if (daily) $("share-btn").addEventListener("click", share);
+  $("practice-btn").addEventListener("click", startPractice);
+  const back = $("back-btn");
+  if (back) back.addEventListener("click", backToDaily);
+  if (daily) tickCountdown();
+}
+
+function render() {
+  renderMap();
+  renderHints();
+  renderGuesses();
+  renderEnd();
+  els.search.hidden = state.status !== "playing";
+  els.inputHint.hidden = state.status !== "playing";
+  els.input.disabled = state.status !== "playing";
+  els.modeBadge.hidden = state.mode !== "practice";
+  els.puzzleNo.textContent = state.mode === "daily" ? `Puzzle #${state.puzzleNumber}` : "";
+}
+
+/* --------------------------------------------------------------- sharing -- */
+
+/** The emoji grid, e.g. "Mind the Gap #7 — 4/6". */
+function shareText() {
+  const score = state.status === "won" ? `${state.guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+  const grid = state.guesses.map((slug) => SQUARES[verdict(slug)]).join("");
+  return `Mind the Gap #${state.puzzleNumber} — ${score}\n${grid}\n${location.origin}${location.pathname}`;
+}
+
+async function share() {
+  const text = shareText();
+  const btn = $("share-btn");
+  // The Web Share API needs a user gesture and only exists on (mostly) mobile;
+  // everywhere else, the clipboard is the sensible equivalent.
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "Copied!";
+  } catch (err) {
+    // A cancelled share is not a failure and should say nothing.
+    if (err && err.name === "AbortError") return;
+    btn.textContent = "Press Ctrl+C";
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    setTimeout(() => ta.remove(), 8000);
+    return;
+  }
+  setTimeout(() => { if ($("share-btn")) $("share-btn").textContent = "Share result"; }, 2000);
+}
+
+let countdownTimer = null;
+function tickCountdown() {
+  clearInterval(countdownTimer);
+  const paint = () => {
+    const el = $("countdown");
+    if (!el) { clearInterval(countdownTimer); return; }
+    const ms = msUntilNextLondonDay();
+    const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+    el.textContent = [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+  };
+  paint();
+  countdownTimer = setInterval(paint, 1000);
+}
+
+/* ------------------------------------------------------------ game flow --- */
+
+function submitGuess(slug) {
+  if (state.status !== "playing") return;
+  if (!state.bySlug.has(slug) || state.guesses.includes(slug)) return;
+
+  state.guesses.push(slug);
+  if (slug === state.answer.slug) state.status = "won";
+  else if (state.guesses.length >= MAX_GUESSES) state.status = "lost";
+
+  els.input.value = "";
+  closeSuggestions();
+
+  if (state.mode === "daily") {
+    saveDaily();
+    if (state.status !== "playing") recordDaily();
+  }
+  render();
+}
+
+/** Start a practice round on a station we have not used recently. */
+function startPractice() {
+  if (state.mode === "daily") {
+    state.dailyResult = { guesses: state.guesses.slice(), status: state.status };
+  }
+  const recent = load(STORE.recent, []);
+  // Avoid the day's answer and the last few practice stations, so consecutive
+  // rounds don't repeat. With 272 stations a 30-deep memory is plenty.
+  const avoid = new Set([...recent, state.mode === "daily" ? state.answer.slug : null].filter(Boolean));
+  let pool = state.stations.filter((s) => !avoid.has(s.slug));
+  if (!pool.length) pool = state.stations;
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  save(STORE.recent, [pick.slug, ...recent].slice(0, 30));
+
+  state.mode = "practice";
+  state.answer = pick;
+  state.guesses = [];
+  state.revealed = [];
+  state.status = "playing";
+  clearInterval(countdownTimer);
+  els.input.value = "";
+  closeSuggestions();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/** Return to the finished daily puzzle from a practice round. */
+function backToDaily() {
+  state.mode = "daily";
+  state.answer = state.bySlug.get(dailySlug());
+  state.guesses = state.dailyResult.guesses.slice();
+  state.status = state.dailyResult.status;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function dailySlug() {
+  // Wrap with modulo: the schedule is 100 days and the game may outlive it.
+  // Repeating after 100 days is a known, documented limitation.
+  const idx = (state.puzzleNumber - 1) % state.schedule.length;
+  return state.schedule[((idx % state.schedule.length) + state.schedule.length) % state.schedule.length];
+}
+
+/* -------------------------------------------------------- autocomplete ---- */
+
+/** Stations to offer for the current query.
+ *
+ *  An empty query returns the whole list rather than nothing, so tapping the
+ *  box opens a browsable list of all 272 stations. Typing filters it: names
+ *  starting with the query rank above names merely containing it.
+ */
+function findMatches(query) {
+  const available = state.stations.filter((s) => !state.guesses.includes(s.slug));
+  const q = normalise(query);
+  if (!q) return available;
+
+  const starts = [], contains = [];
+  for (const s of available) {
+    const idx = s.search.indexOf(q);
+    if (idx === 0) starts.push(s);
+    else if (idx > 0) contains.push(s);
+  }
+  return starts.concat(contains).slice(0, 10);
+}
+
+function renderSuggestions() {
+  const list = state.matches;
+  els.suggestions.innerHTML = "";
+  if (!list.length) {
+    els.suggestions.hidden = true;
+    els.input.setAttribute("aria-expanded", "false");
+    return;
+  }
+  list.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.id = `sugg-${i}`;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(i === state.highlighted));
+    li.innerHTML = `<span class="rail" style="background:${LINE_COLOURS[s.lines[0]] || "#555"}"></span>${s.name}`;
+    li.addEventListener("mousedown", (e) => { e.preventDefault(); submitGuess(s.slug); });
+    els.suggestions.appendChild(li);
+  });
+  els.suggestions.hidden = false;
+  els.input.setAttribute("aria-expanded", "true");
+  els.input.setAttribute("aria-activedescendant", list[state.highlighted] ? `sugg-${state.highlighted}` : "");
+  // The browse list is 272 rows long, so the highlight has to be scrolled to.
+  const active = els.suggestions.children[state.highlighted];
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+function closeSuggestions() {
+  state.matches = [];
+  state.highlighted = -1;
+  renderSuggestions();
+}
+
+function openSuggestions() {
+  state.matches = findMatches(els.input.value);
+  // Pre-highlight the top match only once the player has typed something. With
+  // the full list open, a highlighted first entry would mean a stray Enter
+  // spends one of six guesses on whatever happens to sort first.
+  state.highlighted = (els.input.value.trim() && state.matches.length) ? 0 : -1;
+  renderSuggestions();
+}
+
+function onKeyDown(e) {
+  if (state.status !== "playing") return;
+  const n = state.matches.length;
+  if (e.key === "ArrowDown" && n) {
+    e.preventDefault(); state.highlighted = (state.highlighted + 1) % n; renderSuggestions();
+  } else if (e.key === "ArrowUp" && n) {
+    e.preventDefault(); state.highlighted = (state.highlighted - 1 + n) % n; renderSuggestions();
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    // Enter only ever commits a highlighted suggestion — never raw text, so a
+    // misspelling can't be submitted and argued about (ADR-012).
+    if (state.highlighted >= 0) submitGuess(state.matches[state.highlighted].slug);
+    else els.inputHint.textContent = "Choose a station from the list.";
+  } else if (e.key === "Escape") {
+    closeSuggestions();
+  }
+}
+
+/* ----------------------------------------------------------------- boot --- */
+
+async function start() {
+  let stations, schedule, facts, landmarks;
+  try {
+    [stations, schedule, facts, landmarks] = await Promise.all([
+      fetch("data/stations.json").then((r) => r.json()),
+      fetch("data/schedule.json").then((r) => r.json()),
+      // Facts are a nicety, not a requirement: a missing file must not stop play.
+      fetch("data/facts.json").then((r) => r.json()).catch(() => ({ facts: {} })),
+      // Landmarks are optional in exactly the same way facts are: a station
+      // with no entry simply shows a different line on that rung.
+      fetch("data/landmarks.json").then((r) => r.json()).catch(() => ({ landmarks: {} })),
+    ]);
+  } catch (err) {
+    els.inputHint.textContent =
+      "Could not load the puzzle data. If you opened this file directly, serve it instead: python3 -m http.server";
+    console.error(err);
+    return;
+  }
+
+  state.lines = stations.lines;
+  state.stations = stations.stations.map((s) => ({ ...s, search: normalise(s.name) }));
+  state.stations.sort((a, b) => a.name.localeCompare(b.name));
+  state.bySlug = new Map(state.stations.map((s) => [s.slug, s]));
+  state.schedule = schedule.schedule;
+  // Day 1 comes from schedule.json so the date and the order it indexes can
+  // never drift apart.
+  state.launch = schedule.launch;
+  state.facts = facts.facts || {};
+  state.landmarks = landmarks.landmarks || {};
+
+  // Before launch day this would be zero or negative; show puzzle 1 instead.
+  state.puzzleNumber = Math.max(1, puzzleNumberFor(state.launch, londonDate()));
+  state.answer = state.bySlug.get(dailySlug());
+  if (!state.answer) { els.inputHint.textContent = "Today's puzzle station is missing from the data."; return; }
+
+  // Resume today's game if there is one; yesterday's saved game is ignored.
+  const saved = load(STORE.daily, null);
+  if (saved && saved.n === state.puzzleNumber && Array.isArray(saved.guesses)) {
+    state.guesses = saved.guesses.filter((slug) => state.bySlug.has(slug));
+    state.status = saved.status === "won" || saved.status === "lost" ? saved.status : "playing";
+    if (Array.isArray(saved.revealed)) state.revealed = saved.revealed.filter((i) => Number.isInteger(i));
+  }
+
+  els.input.addEventListener("input", openSuggestions);
+  // Tapping the box opens the full list — no dead end for a first-time player.
+  els.input.addEventListener("focus", openSuggestions);
+  els.input.addEventListener("keydown", onKeyDown);
+  els.input.addEventListener("blur", () => setTimeout(closeSuggestions, 120));
+
+  render();
+}
+
+start();
+</script>
+</body>
+</html>
