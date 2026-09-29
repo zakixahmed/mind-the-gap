@@ -29,11 +29,11 @@
   },
   "district": {
    "first": "Stops near Chelsea's Stamford Bridge stadium",
-   "second": "Also stops near Wimbledon's Centre Court and the Tower of London",
+   "second": "Also stops near Wimbledon's Centre Court and Big Ben",
    "landmarks": [
     "Stamford Bridge",
     "Centre Court",
-    "Tower of London"
+    "Big Ben"
    ]
   },
   "hammersmith-city": {
@@ -56,11 +56,11 @@
   },
   "metropolitan": {
    "first": "Stops near Wembley Stadium",
-   "second": "Also stops near Cassiobury Park in Watford and Madame Tussauds",
+   "second": "Also stops near Cassiobury Park in Watford and the Sherlock Holmes Museum",
    "landmarks": [
     "Wembley Stadium",
     "Cassiobury Park",
-    "Madame Tussauds"
+    "Sherlock Holmes Museum"
    ]
   },
   "northern": {

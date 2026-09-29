@@ -65,10 +65,12 @@ OVERRIDES: dict[str, list[str]] = {
     "bakerloo": ["Imperial War Museum London", "Trafalgar Square", "The Regent's Park"],
     "central": ["St Paul's Cathedral", "Marble Arch", "Westfield"],
     "circle": ["Tower of London", "Madame Tussauds", "Natural History Museum"],
-    "district": ["Stamford Bridge", "Centre Court", "Tower of London"],
+    # No landmark appears for two lines (Zack, 2026-09-29): the Tower of London
+    # stays with the Circle, Madame Tussauds with the Circle too.
+    "district": ["Stamford Bridge", "Centre Court", "Big Ben"],
     "hammersmith-city": ["Portobello Market", "Whitechapel Gallery", "Shepherd's Bush Market"],
     "jubilee": ["The O2", "Lord's Cricket Ground", "Queen Elizabeth Olympic Park"],
-    "metropolitan": ["Wembley Stadium", "Cassiobury Park", "Madame Tussauds"],
+    "metropolitan": ["Wembley Stadium", "Cassiobury Park", "Sherlock Holmes Museum"],
     "northern": ["Camden Market", "Hampstead Heath", "Battersea Power Station"],
     "piccadilly": ["London Heathrow Airport", "Emirates Stadium", "Harrods"],
     "victoria": ["Tate Britain", "Buckingham Palace", "Brixton Market"],
@@ -94,6 +96,7 @@ DISPLAY = {
     "Emirates Stadium": "Arsenal's Emirates Stadium",
     "Cassiobury Park": "Cassiobury Park in Watford",
     "Portobello Market": "Portobello Road Market",
+    "Sherlock Holmes Museum": "the Sherlock Holmes Museum",
 }
 
 
@@ -197,6 +200,14 @@ def main() -> None:
                 print(f"  * {c['name']:<42} {c['kind']:<16} {c['station']:<28} lines={c['lines']} {c['score']:.0f}")
             for r in [r for r in ranked if r not in chosen][:args.runners_up]:
                 print(f"    {r['name']:<42} {r['kind']:<16} {r['station']:<28} lines={r['lines']} {r['score']:.0f}")
+
+    # Each landmark belongs to one line, so a hint never points at two answers.
+    seen: dict[str, str] = {}
+    for line_id, h in hints.items():
+        for name in h["landmarks"]:
+            if name in seen:
+                sys.exit(f"{name!r} is a hint for both {seen[name]} and {line_id}")
+            seen[name] = line_id
 
     if args.show:
         return
