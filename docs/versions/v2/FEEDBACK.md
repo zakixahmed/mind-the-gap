@@ -47,4 +47,4 @@ exactly the people who don't know the city. v3 is aimed at them.
 - An easier mode for visitors, using well-known stations only.
 - Guessing the line rather than the station.
 
-The decision, and why, will be recorded in [v3](../v3/) when it ships.
+**Decision:** guess the line rather than the station — see [v3](../v3/) and ADR-025 in `docs/DECISIONS.md`.

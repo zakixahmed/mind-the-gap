@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-29
+
+The line game, in response to round-2 feedback: v2 still only worked for
+players who know London. See `docs/versions/v2/FEEDBACK.md` and ADR-025.
+
+### Added
+- A new main game: *which tube line is this?* Each puzzle shows one line's
+  whole route in its real TfL colour over a blurred map of London, with the
+  other ten lines faint for context. Three guesses, eleven answers.
+- Three puzzles a day, the same for everyone, dealt from shuffled decks so
+  every line comes up once per eleven puzzles and no day repeats a line. One
+  share grid covers the day.
+- Landmark hints for each line, unlocked by wrong guesses, and a fun fact about
+  the line after every answer, each checked against a recorded source.
+- `scripts/render_lines.py`, `scripts/build_line_hints.py`,
+  `public/data/line_facts.json`.
+- A version history in `docs/versions/`: each release's README, screenshots
+  and the feedback it got.
+
+### Changed
+- The station game moved, unchanged, to `stations.html` as hard mode, linked
+  both ways and keeping its own stats.
+- The deploy check now also requires every line's maps and hints.
+
 ## [0.2.0] — 2026-09-27
 
 The legibility pass, in response to the first round of player feedback
@@ -63,6 +87,7 @@ The legibility pass, in response to the first round of player feedback
 - Placeholder `public/index.html`.
 - Documentation skeleton: README, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/DEVLOG.md`.
 
-[Unreleased]: https://github.com/zakixahmed/mind-the-gap/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/zakixahmed/mind-the-gap/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/zakixahmed/mind-the-gap/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zakixahmed/mind-the-gap/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/zakixahmed/mind-the-gap/releases/tag/v0.1.0

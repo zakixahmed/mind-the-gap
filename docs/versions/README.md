@@ -25,7 +25,13 @@ and hints now unlock face down, to be revealed when the player chooses.
 **What players said.** Still hard to work out the station for anyone who doesn't know
 London. → [Feedback and diagnosis](v2/FEEDBACK.md)
 
-## v3 · in planning
+## [v3 — `v0.3.0`](v3/) · 29 September 2026
 
-Aimed at players who don't know London. Options are listed at the end of the
-[v2 feedback](v2/FEEDBACK.md#options-considered-for-v3).
+**What changed.** The question changed. Instead of naming one of 272 stations,
+you name one of the 11 lines, shown as its whole route in its real colour over
+a blurred map of London. Three guesses, three lines a day, landmark hints along
+the route, and a fun fact after every answer. The station game stays as hard
+mode. Why this option was chosen over the others from round 2 — and what it
+gives up — is in ADR-025.
+
+**What players said.** Waiting for round 3. → [Feedback](v3/FEEDBACK.md)

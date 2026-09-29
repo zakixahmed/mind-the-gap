@@ -37,11 +37,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sanity-check the site before publishing
-        # Cheap guards against the two ways this site could break silently:
-        # a data file missing, or a scheduled station with no rendered maps.
+        # Cheap guards against the ways this site could break silently: a data
+        # file missing, a scheduled station or a line with no rendered maps.
         run: |
           set -euo pipefail
-          for f in public/index.html public/data/stations.json public/data/schedule.json; do
+          for f in public/index.html public/stations.html public/data/stations.json public/data/schedule.json \
+                   public/data/lines.json public/data/line_hints.json; do
             test -s "$f" || { echo "missing or empty: $f"; exit 1; }
           done
           python3 - <<'PY'
@@ -52,6 +53,13 @@ jobs:
           if missing:
               sys.exit(f"scheduled stations with missing map levels: {missing}")
           print(f"{len(schedule)} scheduled puzzles, all six map levels present")
+          lines = json.loads(pathlib.Path("public/data/lines.json").read_text())["lines"]
+          hints = json.loads(pathlib.Path("public/data/line_hints.json").read_text())["hints"]
+          bad = [l for l in lines
+                 if l not in hints or not all(pathlib.Path(f"public/lines/{l}/{n}.webp").is_file() for n in range(1, 4))]
+          if len(lines) != 11 or bad:
+              sys.exit(f"line game incomplete: {len(lines)} lines, missing maps or hints for {bad}")
+          print("11 lines, all three map levels and hints present")
           PY
 
       - uses: actions/configure-pages@v5

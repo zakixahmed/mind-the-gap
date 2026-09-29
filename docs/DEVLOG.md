@@ -12,8 +12,19 @@ One entry per working session, newest at the top. Each entry covers what was bui
 - Round-2 feedback recorded in `docs/versions/v2/FEEDBACK.md`: still hard for players who don't know London.
 - The root README's "How to play" still described v1's hint order; corrected, and the landmark `--extract` step added to the rebuild instructions.
 
+**v3 — the line game (same session)**
+- Direction decided (ADR-025): guess the line, not the station. Whole route in real colour, 3 guesses, 3 puzzles a day, stations kept as hard mode. Zack chose visible colours and whole routes over the alternatives offered (grey mystery line, a stretch of the line); the trade-off — easy for anyone who knows the colours, puzzles repeat every few days — is recorded.
+- `scripts/render_lines.py`: 11 × 3 maps from TfL route geometry and a thinned OSM base map, 1.5 MB. Two fixes on the way: whole-city water relations drew chords when stitched greedily, so rings are now assembled by exact shared endpoints; pale lines vanished at blur level 1, so the route blurs less than the map.
+- `scripts/build_line_hints.py`: automatic ranking by "near only this line" picked suburban parks, so landmarks are hand-picked and machine-checked (exists, within 1 km of a station on the line, no line name, not reused by another line). Two catches: Centre Court is 926 m from Southfields (limit raised to 1 km), and Battersea Power Station was dropped by the station-game junk filter for containing "station".
+- `public/index.html` is the line game; the v2 game moved unchanged to `stations.html`. Eleven uncoloured answer buttons. Daily deal from seeded decks, verified over 200 days: no repeats within a day, 54–55 appearances per line.
+- `public/data/line_facts.json`: one fun fact per line, each checked against a recorded source. One planned claim (that critics called "Bakerloo" undignified) was dropped because the source didn't support it.
+- Screenshots, README, `docs/versions/v3/`, CHANGELOG 0.3.0, deploy check extended to the line game. Tagged `v0.3.0`.
+
+**Noticed, not fixed**
+- 🟨 means "shares a station with the answer", and in central London almost every line does, so most wrong guesses are yellow. Round 3 will say whether it matters.
+
 **Next**
-- Decide v3's direction (options in `docs/versions/v2/FEEDBACK.md`).
+- Zack pushes `main` and `v0.3.0`; round-3 feedback into `docs/versions/v3/FEEDBACK.md`.
 
 ## 2026-09-27 — Session 5: the 2.5 km re-render, and landmarks people have heard of
 

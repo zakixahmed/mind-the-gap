@@ -76,6 +76,31 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-09-29 — after session 6 (v0.3.0: the line game)
+
+**Done**
+- v0.2.0 pushed and live. Version history in `docs/versions/` (v1, v2, v3).
+- v3 built and tagged `v0.3.0` (ADR-025): the front page asks "which tube line is this?" —
+  whole route in real colour, 3 guesses, 3 lines a day, landmark hints, a fun fact per line.
+  The station game is unchanged at `public/stations.html` as hard mode.
+- New pieces: `scripts/render_lines.py` → `public/lines/`, `scripts/build_line_hints.py` →
+  `public/data/line_hints.json`, `public/data/line_facts.json`, `public/data/lines.json`.
+
+**Next — start here**
+1. Zack pushes `main` and the `v0.3.0` tag (Pages deploys on push to `main`).
+2. Round-3 feedback from friends, especially those who don't know London; record it in
+   `docs/versions/v3/FEEDBACK.md`. The questions to ask are listed there.
+3. If it's too easy: hold the colour back until guess 2, or show a stretch of the line.
+   If yellow squares mean nothing: tighten 🟨 (e.g. shares several consecutive stops).
+4. Phase 6 still open for both modes: how-to-play screen, light mode.
+5. Small fix still open: `fetch_osm_local.py` should fail loudly on a truncated .pbf.
+
+**Notes**
+- The line game's day #1 is 2026-09-29 (`LAUNCH` in `public/index.html`). Changing it
+  changes every player's deal.
+- Line hints are hand-picked in `OVERRIDES` in `build_line_hints.py`; the script refuses a
+  landmark more than 1 km from the line, containing a line name, or used by two lines.
+
 ### 2026-09-27 — after session 5 (re-render done, landmarks fixed)
 
 **Done**
