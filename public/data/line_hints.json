@@ -1,0 +1,103 @@
+{
+ "hints": {
+  "bakerloo": {
+   "first": "Stops near the Imperial War Museum",
+   "second": "Also stops near Trafalgar Square and Regent's Park",
+   "landmarks": [
+    "Imperial War Museum London",
+    "Trafalgar Square",
+    "The Regent's Park"
+   ]
+  },
+  "central": {
+   "first": "Stops near St Paul's Cathedral",
+   "second": "Also stops near Marble Arch and Westfield shopping centre",
+   "landmarks": [
+    "St Paul's Cathedral",
+    "Marble Arch",
+    "Westfield"
+   ]
+  },
+  "circle": {
+   "first": "Stops near the Tower of London",
+   "second": "Also stops near Madame Tussauds and the Natural History Museum",
+   "landmarks": [
+    "Tower of London",
+    "Madame Tussauds",
+    "Natural History Museum"
+   ]
+  },
+  "district": {
+   "first": "Stops near Chelsea's Stamford Bridge stadium",
+   "second": "Also stops near Wimbledon's Centre Court and the Tower of London",
+   "landmarks": [
+    "Stamford Bridge",
+    "Centre Court",
+    "Tower of London"
+   ]
+  },
+  "hammersmith-city": {
+   "first": "Stops near Portobello Road Market",
+   "second": "Also stops near Whitechapel Gallery and Shepherd's Bush Market",
+   "landmarks": [
+    "Portobello Market",
+    "Whitechapel Gallery",
+    "Shepherd's Bush Market"
+   ]
+  },
+  "jubilee": {
+   "first": "Stops near The O2",
+   "second": "Also stops near Lord's Cricket Ground and the Olympic Park",
+   "landmarks": [
+    "The O2",
+    "Lord's Cricket Ground",
+    "Queen Elizabeth Olympic Park"
+   ]
+  },
+  "metropolitan": {
+   "first": "Stops near Wembley Stadium",
+   "second": "Also stops near Cassiobury Park in Watford and Madame Tussauds",
+   "landmarks": [
+    "Wembley Stadium",
+    "Cassiobury Park",
+    "Madame Tussauds"
+   ]
+  },
+  "northern": {
+   "first": "Stops near Camden Market",
+   "second": "Also stops near Hampstead Heath and Battersea Power Station",
+   "landmarks": [
+    "Camden Market",
+    "Hampstead Heath",
+    "Battersea Power Station"
+   ]
+  },
+  "piccadilly": {
+   "first": "Stops near Heathrow Airport",
+   "second": "Also stops near Arsenal's Emirates Stadium and Harrods",
+   "landmarks": [
+    "London Heathrow Airport",
+    "Emirates Stadium",
+    "Harrods"
+   ]
+  },
+  "victoria": {
+   "first": "Stops near Tate Britain",
+   "second": "Also stops near Buckingham Palace and Brixton Market",
+   "landmarks": [
+    "Tate Britain",
+    "Buckingham Palace",
+    "Brixton Market"
+   ]
+  },
+  "waterloo-city": {
+   "first": "Stops near the Bank of England",
+   "second": "Also stops near the London Eye and the Royal Exchange",
+   "landmarks": [
+    "Bank of England",
+    "London Eye",
+    "Royal Exchange"
+   ]
+  }
+ }
+}
