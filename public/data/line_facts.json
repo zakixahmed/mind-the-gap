@@ -1,0 +1,50 @@
+{
+ "_note": "One fun fact per line, shown after the answer. Every claim is checked against the source listed with it (2026-09-29). Keep it that way: a wrong fact is worse than none.",
+ "facts": {
+  "bakerloo": {
+   "text": "Baker Street + Waterloo = Bakerloo. The mash-up nickname caught on so fast that it became the official name in 1906, just months after the line opened. A ship name before ship names were a thing.",
+   "source": "https://en.wikipedia.org/wiki/Bakerloo_line"
+  },
+  "central": {
+   "text": "When it opened in 1900, every journey cost a flat twopence, so Londoners called it the Twopenny Tube. It's also the longest line on the network: 74 km end to end. That's a lot of time to scroll.",
+   "source": "https://en.wikipedia.org/wiki/Central_line_(London_Underground)"
+  },
+  "circle": {
+   "text": "Plot twist: the Circle line hasn't been a circle since 2009. The loop was broken open at Edgware Road and stretched out to Hammersmith, so it's now more of a spiral.",
+   "source": "https://en.wikipedia.org/wiki/Circle_line_(London_Underground)"
+  },
+  "district": {
+   "text": "The District line serves 60 stations, more than any other line on the Underground. Main character energy.",
+   "source": "https://en.wikipedia.org/wiki/District_line"
+  },
+  "hammersmith-city": {
+   "text": "Its stretch from Paddington to Farringdon opened in 1863 as part of the world's first underground railway, but it only got its own pink line on the tube map in 1990. The launch? Several hundred pink balloons.",
+   "source": "https://en.wikipedia.org/wiki/Hammersmith_%26_City_line"
+  },
+  "jubilee": {
+   "text": "It was going to be called the Fleet line. It was renamed for Queen Elizabeth II's 1977 Silver Jubilee, which is why it's silver-grey on the map. A rebrand, but make it royal.",
+   "source": "https://en.wikipedia.org/wiki/Jubilee_line"
+  },
+  "metropolitan": {
+   "text": "The world's first underground railway. It opened on 10 January 1863 with gas-lit wooden carriages pulled by steam locomotives. Steam trains. Underground. Imagine the smoke.",
+   "source": "https://en.wikipedia.org/wiki/Metropolitan_line"
+  },
+  "northern": {
+   "text": "Hampstead, on the Northern line, has the deepest platforms on the whole Underground: 58.5 metres below ground. That's deeper than Nelson's Column is tall.",
+   "source": "https://en.wikipedia.org/wiki/Hampstead_tube_station",
+   "also": "https://en.wikipedia.org/wiki/Nelson%27s_Column (51.59 m tall)"
+  },
+  "piccadilly": {
+   "text": "During the Blitz, Winston Churchill sheltered in Down Street, a Piccadilly line station that had already closed in 1932. Trains still rush straight past it today. A real-life ghost station.",
+   "source": "https://www.ltmuseum.co.uk/collections/stories/war/secret-wartime-history-down-street-station"
+  },
+  "victoria": {
+   "text": "When it opened in 1968 it became the world's first full-scale automatic railway. The driver shuts the doors and presses start; the train does the rest.",
+   "source": "https://en.wikipedia.org/wiki/Victoria_line"
+  },
+  "waterloo-city": {
+   "text": "Two stations, one tunnel under the Thames, and a nickname Londoners genuinely use: The Drain.",
+   "source": "https://news.yahoo.com/drain-run-again-14-month-184450487.html"
+  }
+ }
+}

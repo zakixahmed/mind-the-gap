@@ -304,6 +304,24 @@ h1 .bar { color: var(--accent); font-weight: 800; }
   padding: 2px 12px;
   margin: 2px 0 10px;
 }
+/* The fun fact: set apart from the dry facts above it, so it reads as a treat. */
+.funfact {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--answer-colour, var(--accent));
+  background: var(--surface-2);
+  border-radius: 0 9px 9px 0;
+  font-size: .92rem;
+  color: var(--text);
+}
+.funfact b {
+  display: block;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .btn {
   font: inherit;
@@ -455,7 +473,7 @@ const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
 const VERDICT_NOTE = { correct: "", near: "shares a station with it", far: "no stations in common" };
 
 const state = {
-  lines: {}, hints: {}, ids: [], stationsOf: {},
+  lines: {}, hints: {}, facts: {}, ids: [], stationsOf: {},
   day: 0,
   today: [],             // the day's three line ids
   idx: 0,                // which of the three is on screen
@@ -728,7 +746,8 @@ function renderResult() {
   let html = `
     <h2>${heading}</h2>
     <div class="answer-line" style="background:${line.colour};color:${readableOn(line.colour)}">${lineLabel(p.line)}</div>
-    <p>The ${line.name} line has ${line.stations} station${line.stations === 1 ? "" : "s"}. ${h.first}. ${h.second}.</p>`;
+    <p>The ${line.name} line has ${line.stations} station${line.stations === 1 ? "" : "s"}. ${h.first}. ${h.second}.</p>
+    ${state.facts[p.line] ? `<div class="funfact" style="--answer-colour:${line.colour}"><b>Fun fact</b>${state.facts[p.line].text}</div>` : ""}`;
 
   if (state.mode === "practice") {
     html += `<div class="actions">
@@ -864,12 +883,14 @@ function tickCountdown() {
 /* ----------------------------------------------------------------- boot --- */
 
 async function start() {
-  let lines, hints, stations;
+  let lines, hints, stations, facts;
   try {
-    [lines, hints, stations] = await Promise.all([
+    [lines, hints, stations, facts] = await Promise.all([
       fetch("data/lines.json").then((r) => r.json()),
       fetch("data/line_hints.json").then((r) => r.json()),
       fetch("data/stations.json").then((r) => r.json()),
+      // A nicety, not a requirement: the game plays fine without its facts.
+      fetch("data/line_facts.json").then((r) => r.json()).catch(() => ({ facts: {} })),
     ]);
   } catch (err) {
     document.querySelector(".choices-hint").textContent =
@@ -880,6 +901,7 @@ async function start() {
 
   state.lines = lines.lines;
   state.hints = hints.hints;
+  state.facts = facts.facts || {};
   // Alphabetical, so the buttons are easy to scan and don't hint at anything.
   state.ids = Object.keys(state.lines).sort((a, b) => state.lines[a].name.localeCompare(state.lines[b].name));
   for (const id of state.ids) state.stationsOf[id] = new Set();
