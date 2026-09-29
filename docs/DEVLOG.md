@@ -4,6 +4,17 @@ One entry per working session, newest at the top. Each entry covers what was bui
 
 ---
 
+## 2026-09-29 — Session 6: v0.2.0 live, and a version history
+
+**Built**
+- `v0.2.0` pushed and live.
+- `docs/versions/`: one folder per release (v1, v2) holding the README it shipped with, its screenshots and the feedback it got, plus an index telling the story in order. The root README stays the current version's and gains a "How it evolved" table. `docs/FEEDBACK.md` is split into `v1/FEEDBACK.md`; v1's screenshots restored from the `v0.1.0` commit.
+- Round-2 feedback recorded in `docs/versions/v2/FEEDBACK.md`: still hard for players who don't know London.
+- The root README's "How to play" still described v1's hint order; corrected, and the landmark `--extract` step added to the rebuild instructions.
+
+**Next**
+- Decide v3's direction (options in `docs/versions/v2/FEEDBACK.md`).
+
 ## 2026-09-27 — Session 5: the 2.5 km re-render, and landmarks people have heard of
 
 **Built**

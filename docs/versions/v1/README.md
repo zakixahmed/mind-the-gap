@@ -1,4 +1,7 @@
-# Mind the Gap
+# Mind the Gap — v1
+
+> **Archived README — v0.1.0.** This is the README as it stood for v1, kept so the project's history can be read version by version. Links point at the current repository; the code as it was is at the [`v0.1.0` tag](https://github.com/zakixahmed/mind-the-gap/tree/v0.1.0). What players said about this version is in [FEEDBACK.md](FEEDBACK.md).
+
 
 A daily puzzle game: guess the London Underground station from a heavily blurred map crop centred on it. Every wrong guess sharpens the image and unlocks a hint. Six guesses. One puzzle a day, the same for everyone.
 
@@ -7,31 +10,17 @@ Think Wordle meets Worldle, for London.
 **▶ Play it: [zakixahmed.github.io/mind-the-gap](https://zakixahmed.github.io/mind-the-gap/)**
 
 <p>
-  <img src="docs/versions/v2/screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with the zone and nearby-landmark hints revealed" width="300">
-  <img src="docs/versions/v2/screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
+  <img src="screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with zone and line hints revealed" width="300">
+  <img src="screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
 </p>
 
-<img src="docs/versions/v2/screenshots/desktop.png" alt="The game at desktop width" width="620">
-
-## How it evolved
-
-Every version went to real players, and what they said decided the next one.
-Each version keeps its own folder with the README it shipped with, its
-screenshots, and the feedback it got.
-
-| Version | Released | What changed | What players said |
-|---|---|---|---|
-| [v1](docs/versions/v1/) — `v0.1.0` | 22 Sep 2026 | First release: 1 km blurred maps; zone, line, borough and letter hints | "Too hard to guess" — and asked for a landmark with the map |
-| [v2](docs/versions/v2/) — `v0.2.0` | 27 Sep 2026 | 2.5 km maps, a softer blur, a scale bar, a "Nearby" landmark hint, tap-to-reveal hints | Still hard to work out the station if you don't know London |
-| v3 | in planning | Aimed at players who don't know London | — |
-
-The full story, version by version, is in [`docs/versions/`](docs/versions/).
+<img src="screenshots/desktop.png" alt="The game at desktop width" width="620">
 
 ## How to play
 
 1. You are shown a blurred map centred on a mystery Tube station.
 2. Type a station name and pick it from the autocomplete list (no free text, so no spelling disputes).
-3. A wrong guess sharpens the map one level and unlocks the next hint, face down — tap it when you want it. The order is **zone → a nearby landmark → line(s) → borough → first letter and length**.
+3. A wrong guess sharpens the map one level and reveals the next hint, in this order: **zone → line(s) → borough → first letter → number of letters**.
 4. You have six guesses. Guess it and share your emoji grid:
    🟩 correct · 🟨 same line or an adjacent station · ⬛ wrong.
 5. A new puzzle unlocks at midnight (London time) — the same one for everyone.
@@ -59,42 +48,19 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 python scripts/build_stations.py   # → data/stations.json       (~5 min, see below)
-
-# Map data. Download the extracts first — see below for which ones.
-python scripts/fetch_osm_local.py data/pbf/*.osm.pbf   # → data/raw/     (~10 min)
-python scripts/render_maps.py --offline                # → public/maps/<slug>/1-6.webp
-
-python scripts/build_landmarks.py --extract data/pbf/*.osm.pbf   # landmark candidates (~1 min)
-python scripts/build_landmarks.py  # → data/landmarks.json     (instant, offline)
-python scripts/build_schedule.py   # → data/schedule.json      (instant, offline)
+python scripts/render_maps.py      # → public/maps/<slug>/1-6.webp
+python scripts/build_schedule.py   # → data/schedule.json       (instant, offline)
 ```
 
-**`fetch_osm_local.py`** builds the OpenStreetMap cache from local extracts.
-Download these from [Geofabrik](https://download.geofabrik.de/europe/united-kingdom/england/)
-into `data/pbf/`: `greater-london` covers most of the network, and the
-Metropolitan and Central line outliers need `buckinghamshire` (Amersham,
-Chesham), `hertfordshire` (Watford, Rickmansworth, Moor Park) and `essex`
-(Epping, Theydon Bois, Loughton). The script extracts the union of every
-feature the map draws, then slices it per station into `data/raw/`.
-
-Use `curl -L`: the `-latest` URLs are a 302 to a dated file, and without `-L`
-you get a few hundred bytes of redirect HTML named `.osm.pbf`. Downloading the
-dated filename the redirect points at (`greater-london-260924.osm.pbf` rather
-than `-latest`) is what makes a rebuild genuinely reproducible — `-latest`
-means something different every week.
-
-It replaced a run against the Overpass API, which the wider 2.5 km crop made
-untenable: eight stations in 48 minutes, or roughly 27 hours for the full set,
-with most of that spent waiting on requests that returned 504. Public Overpass
-rate-limits per IP, and 272 heavy queries is not a reasonable thing to ask of
-donated infrastructure. A local extract has no rate limit, needs no network
-during the run, and is reproducible — the same `.pbf` always yields the same
-maps. `render_maps.py` still has its Overpass path for filling a single gap.
-
-**`render_maps.py`** draws a label-free map around each station from that cache
-and writes six blur levels as WebP. Because the data is local, re-tuning the
-cartography is free: `--offline` re-renders from cache, `--only slug,slug` does
-a few stations, `--contact-sheet` writes a 6-up review image.
+**`render_maps.py`** fetches the raw OpenStreetMap features around each station
+from the Overpass API and draws a label-free map, then writes six blur levels as
+WebP. Responses cache to `data/raw/` so re-tuning the cartography needs no
+network: `--offline` re-renders from cache, `--only slug,slug` does a few
+stations, `--contact-sheet` writes a 6-up review image. A full run is 272
+Overpass queries; the public instances are often busy, so it retries across
+three mirrors, skips anything it cannot fetch, and lists the failures at the end
+— run it again to fill the gaps. Budget an hour or more, and run it in the
+background: `nohup python scripts/render_maps.py > render.log 2>&1 &`.
 
 **`build_schedule.py`** writes the 100-day order the daily puzzle follows,
 mixing famous and obscure stations with never three obscure in a row. Which
@@ -116,7 +82,7 @@ refuses to write `stations.json` if anything is missing. An optional
 
 ## Tech decisions
 
-Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) and the structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Short version — the reasoning lives in [docs/DECISIONS.md](../../../docs/DECISIONS.md) and the structure in [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
 
 | Area | Choice | Why (one line) |
 |------|--------|----------------|
@@ -131,7 +97,7 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 ## Deployment
 
 The site is `public/` and nothing else — no build step, no bundler, no server.
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) publishes that
+[`.github/workflows/deploy.yml`](../../../.github/workflows/deploy.yml) publishes that
 folder to GitHub Pages on every push to `main`.
 
 GitHub Pages can only serve a branch's root or its `/docs` folder, so rather
@@ -149,9 +115,9 @@ Actions**, then push to `main`.
 
 ## Licence and attribution
 
-- **Code:** [MIT](LICENSE).
+- **Code:** [MIT](../../../LICENSE).
 - **Station data:** [TfL Unified API](https://api.tfl.gov.uk) under the [TfL open data licence](https://tfl.gov.uk/info-for/open-data-users/) — *Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights 2019.* Boroughs from [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim — *© OpenStreetMap contributors, ODbL 1.0.*
-- **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data, read from [Geofabrik](https://download.geofabrik.de) regional extracts (v0.1.0 used the [Overpass API](https://overpass-api.de)) — *© OpenStreetMap contributors*, ODbL. The nearby-landmark hints come from the same data. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
+- **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data retrieved via the [Overpass API](https://overpass-api.de) — *© OpenStreetMap contributors*, ODbL. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
 
 ## Roadmap
 
@@ -162,7 +128,6 @@ Actions**, then push to `main`.
 - [x] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule, practice mode
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
 - [x] Phase 7 — deployment, real screenshots, `v0.1.0`
-- [x] `v0.2.0` — the legibility pass after round-1 feedback: 2.5 km maps, a softer blur curve, landmark hints, tap-to-reveal hints (see [`docs/versions/v2`](docs/versions/v2/))
 
 **Later, not in MVP:** archive mode for past puzzles, hard mode, distance-and-direction feedback on wrong guesses.
 

@@ -1,12 +1,6 @@
-# Playtest feedback
+# Feedback on v1 (`v0.1.0`)
 
-What real players said, and what was changed because of it. One section per
-round. This file exists because the alternative — deciding what is fun by
-playing your own game, which you cannot lose — is not a method.
-
----
-
-## Round 1 — v0.1.0, September 2026
+_Round 1 of playtesting, September 2026._
 
 **How it was tested.** The live site was shared with a handful of friends, who
 played unprompted on their own phones. No script, no questions asked in
@@ -22,7 +16,7 @@ autocomplete, or the phone layout. The single complaint was difficulty — which
 is a good failure to have, in that everything mechanical worked and the problem
 was in the design.
 
-### Diagnosis
+## Diagnosis
 
 Taking "too hard" at face value and simply reducing the blur would have been
 the wrong fix. Watching where the difficulty actually comes from, there were
@@ -55,7 +49,7 @@ first three are nearly useless to anyone who does not already carry the tube map
 in their head. There was no rung that helped a player *locate* themselves, which
 is the thing the map was failing to do.
 
-### Also worth recording
+## Also worth recording
 
 Some testers do not know London well. That is a real limit on what this feedback
 proves: a London-knowledge game is supposed to reward London knowledge, and no
@@ -64,9 +58,9 @@ it. The changes below are aimed at players who could plausibly get there — at
 making the map readable enough to be worth reasoning about — not at removing the
 need to know the city.
 
-### Changes made in response
+## Changes made in response
 
-See `CHANGELOG.md` 0.2.0 and ADR-018 onward for the detail.
+These became [v2](../v2/). See `CHANGELOG.md` 0.2.0 and ADR-018 onward in `docs/DECISIONS.md` for the detail.
 
 - Crop widened from 1 km to 2.5 km, at a higher output resolution so the extra
   ground does not cost street detail. Addresses cause 1.

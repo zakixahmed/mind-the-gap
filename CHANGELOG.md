@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] — 2026-09-27
 
 The legibility pass, in response to the first round of player feedback
-("too hard to guess"). See `docs/FEEDBACK.md`.
+("too hard to guess"). See `docs/versions/v1/FEEDBACK.md`.
 
 ### Added
 - A "nearby landmark" hint: the nearest notable place, with a rough distance and
@@ -18,7 +18,7 @@ The legibility pass, in response to the first round of player feedback
   Landmarks are ranked by whether OpenStreetMap links them to Wikipedia, so the
   hint names places people recognise rather than the nearest pocket park.
 - A scale bar and north cue on the map, so the crop can be read at a known size.
-- `docs/FEEDBACK.md`, recording each round of playtesting and what changed
+- A playtesting record, recording each round of feedback and what changed
   because of it.
 
 ### Changed

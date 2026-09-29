@@ -90,7 +90,7 @@ _Updated at the end of every session. Newest first._
 
 **Next — start here**
 1. Zack pushes `main` and the `v0.2.0` tag; the Pages workflow deploys.
-2. Second round of feedback from the same friends; record it in `docs/FEEDBACK.md`.
+2. Second round of feedback from the same friends; record it in `docs/versions/v2/FEEDBACK.md`.
 3. Phase 6: how-to-play modal (first visit), light mode toggle, first-time walkthrough.
    Also: on desktop the "N guesses left" label sits under the map's right edge rather than
    the column's — align it with the rest of the layout.

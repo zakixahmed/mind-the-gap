@@ -1,4 +1,7 @@
-# Mind the Gap
+# Mind the Gap — v2
+
+> **Archived README — v0.2.0.** This is the README as it stood for v2, kept so the project's history can be read version by version. Links point at the current repository; the code as it was is at the [`v0.2.0` tag](https://github.com/zakixahmed/mind-the-gap/tree/v0.2.0). What players said about this version is in [FEEDBACK.md](FEEDBACK.md).
+
 
 A daily puzzle game: guess the London Underground station from a heavily blurred map crop centred on it. Every wrong guess sharpens the image and unlocks a hint. Six guesses. One puzzle a day, the same for everyone.
 
@@ -7,11 +10,11 @@ Think Wordle meets Worldle, for London.
 **▶ Play it: [zakixahmed.github.io/mind-the-gap](https://zakixahmed.github.io/mind-the-gap/)**
 
 <p>
-  <img src="docs/versions/v2/screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with the zone and nearby-landmark hints revealed" width="300">
-  <img src="docs/versions/v2/screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
+  <img src="screenshots/midgame.png" alt="Mid-game: a partly sharpened map of Waterloo with the zone and nearby-landmark hints revealed" width="300">
+  <img src="screenshots/win.png" alt="The win screen, showing the answer, a fact, the share button and guess statistics" width="300">
 </p>
 
-<img src="docs/versions/v2/screenshots/desktop.png" alt="The game at desktop width" width="620">
+<img src="screenshots/desktop.png" alt="The game at desktop width" width="620">
 
 ## How it evolved
 
@@ -21,11 +24,11 @@ screenshots, and the feedback it got.
 
 | Version | Released | What changed | What players said |
 |---|---|---|---|
-| [v1](docs/versions/v1/) — `v0.1.0` | 22 Sep 2026 | First release: 1 km blurred maps; zone, line, borough and letter hints | "Too hard to guess" — and asked for a landmark with the map |
-| [v2](docs/versions/v2/) — `v0.2.0` | 27 Sep 2026 | 2.5 km maps, a softer blur, a scale bar, a "Nearby" landmark hint, tap-to-reveal hints | Still hard to work out the station if you don't know London |
+| [v1](../v1/) — `v0.1.0` | 22 Sep 2026 | First release: 1 km blurred maps; zone, line, borough and letter hints | "Too hard to guess" — and asked for a landmark with the map |
+| [v2](./) — `v0.2.0` | 27 Sep 2026 | 2.5 km maps, a softer blur, a scale bar, a "Nearby" landmark hint, tap-to-reveal hints | Still hard to work out the station if you don't know London |
 | v3 | in planning | Aimed at players who don't know London | — |
 
-The full story, version by version, is in [`docs/versions/`](docs/versions/).
+The full story, version by version, is in [`docs/versions/`](../).
 
 ## How to play
 
@@ -116,7 +119,7 @@ refuses to write `stations.json` if anything is missing. An optional
 
 ## Tech decisions
 
-Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) and the structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Short version — the reasoning lives in [docs/DECISIONS.md](../../../docs/DECISIONS.md) and the structure in [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
 
 | Area | Choice | Why (one line) |
 |------|--------|----------------|
@@ -131,7 +134,7 @@ Short version — the reasoning lives in [docs/DECISIONS.md](docs/DECISIONS.md) 
 ## Deployment
 
 The site is `public/` and nothing else — no build step, no bundler, no server.
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) publishes that
+[`.github/workflows/deploy.yml`](../../../.github/workflows/deploy.yml) publishes that
 folder to GitHub Pages on every push to `main`.
 
 GitHub Pages can only serve a branch's root or its `/docs` folder, so rather
@@ -149,7 +152,7 @@ Actions**, then push to `main`.
 
 ## Licence and attribution
 
-- **Code:** [MIT](LICENSE).
+- **Code:** [MIT](../../../LICENSE).
 - **Station data:** [TfL Unified API](https://api.tfl.gov.uk) under the [TfL open data licence](https://tfl.gov.uk/info-for/open-data-users/) — *Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights 2019.* Boroughs from [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim — *© OpenStreetMap contributors, ODbL 1.0.*
 - **Map imagery:** drawn from [OpenStreetMap](https://www.openstreetmap.org/copyright) data, read from [Geofabrik](https://download.geofabrik.de) regional extracts (v0.1.0 used the [Overpass API](https://overpass-api.de)) — *© OpenStreetMap contributors*, ODbL. The nearby-landmark hints come from the same data. No third-party tiles are used or redistributed. This attribution also appears in the app footer.
 
@@ -162,7 +165,7 @@ Actions**, then push to `main`.
 - [x] Phase 5 — daily logic, share grid, stats, countdown, 100-day schedule, practice mode
 - [ ] Phase 6 — polish and playtest: how-to-play modal, light mode, footer attribution
 - [x] Phase 7 — deployment, real screenshots, `v0.1.0`
-- [x] `v0.2.0` — the legibility pass after round-1 feedback: 2.5 km maps, a softer blur curve, landmark hints, tap-to-reveal hints (see [`docs/versions/v2`](docs/versions/v2/))
+- [x] `v0.2.0` — the legibility pass after round-1 feedback: 2.5 km maps, a softer blur curve, landmark hints, tap-to-reveal hints (see [`docs/versions/v2`](./))
 
 **Later, not in MVP:** archive mode for past puzzles, hard mode, distance-and-direction feedback on wrong guesses.
 
