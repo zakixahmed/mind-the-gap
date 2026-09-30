@@ -17,7 +17,7 @@ doesn't know London may not know the names at all, and the buttons are what
 lets them play. One reply so far; see what the non-Londoners say before
 deciding.
 
-**Tester 2 — a friend.** Likes it, but wants more to go on from the start:
+**Tester 2 — lived in London for a year.** Likes it, but wants more to go on from the start:
 
 > The game is good, but a little more information on the map would make the
 > guesses easier. Hints such as notable places or stops along the route would
@@ -29,6 +29,13 @@ unlock after a wrong guess, so a player who gets the first guess wrong has
 already paid for them. And the station count is not a clue during play: it is
 shown on the result card after the answer, so it reads as information that
 arrived too late.
+
+**Tester 3.** Enjoyed it and wants more of it:
+
+> Add more games, this was fun.
+
+Not clear whether "more games" means more puzzles a day or other kinds of
+puzzle; either way, the first unprompted "this was fun" of any round.
 
 ## Early read
 
