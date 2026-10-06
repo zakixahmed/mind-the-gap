@@ -14,8 +14,12 @@ link sticker. Responses are added here as they come in._
 Worth weighing against who v3 is for: a Londoner already knows all eleven
 names, so the buttons give them little beyond convenience — but a player who
 doesn't know London may not know the names at all, and the buttons are what
-lets them play. One reply so far; see what the non-Londoners say before
-deciding.
+lets them play.
+
+**Resolved in ADR-028** without having to choose between them: typing is now an
+opt-in toggle under the buttons, and the share grid marks a line answered that
+way. Round 4 should ask whether anyone noticed the toggle — an opt-in nobody
+finds is the same as not having shipped it.
 
 **Tester 2 — lived in London for a year.** Likes it, but wants more to go on from the start:
 

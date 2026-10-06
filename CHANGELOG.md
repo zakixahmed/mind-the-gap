@@ -21,8 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   yellow squares that recorded nothing. Now 32%. See ADR-027.
 
 ### Added
-- The share grid marks a line solved with help (`💡`), so that solving one
-  unaided still reads differently from being handed it.
+- An opt-in harder mode on the line game: type the line name instead of picking
+  it from eleven buttons. Round-3 feedback from a Londoner, who found the
+  visible options too easy — but the buttons stay the default, since they are
+  what lets someone who doesn't know London play at all. See ADR-028.
+- The share grid marks a line solved with help (`💡`) or answered by typing
+  (`⌨️`), so that choosing to make it harder is visible and solving one unaided
+  reads differently from being handed it.
 
 ## [0.3.0] — 2026-09-29
 

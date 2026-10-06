@@ -285,6 +285,46 @@ h1 .bar { color: var(--accent); font-weight: 800; }
 .choice:disabled { opacity: .35; cursor: default; text-decoration: line-through; }
 .choices-hint { font-size: .78rem; color: var(--muted); margin: 8px 2px 0; }
 
+/* Typing the answer instead of picking it from eleven buttons. Round-3
+   feedback from a Londoner: "Having the options wide open makes it easier."
+   It is opt-in rather than a replacement — the buttons are what let a player
+   who doesn't know London play at all (ADR-028). */
+#mode-toggle {
+  font: inherit;
+  font-size: .78rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted var(--border);
+  padding: 0;
+  margin: 10px 2px 0;
+  cursor: pointer;
+}
+#mode-toggle:hover, #mode-toggle:focus-visible { color: var(--text); }
+#typed { margin-top: 14px; }
+#typed-input {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 13px;
+}
+#typed-input:focus { outline: none; border-color: var(--accent); }
+#typed-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+#typed-list li {
+  font-size: .92rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+#typed-list li[aria-selected="true"] { border-color: var(--accent); }
+
 /* ---------------------------------------------------------- result card -- */
 .card {
   margin-top: 16px;
@@ -436,7 +476,16 @@ footer a { color: var(--muted); }
 
     <div id="choices-wrap">
       <div class="choices" id="choices" role="group" aria-label="Choose a line"></div>
-      <p class="choices-hint">Pick the line. Three guesses — a wrong one sharpens the map and unlocks another hint.</p>
+
+      <div id="typed" hidden>
+        <input id="typed-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="Type a line name…" aria-label="Type a line name" role="combobox"
+               aria-expanded="false" aria-controls="typed-list" aria-autocomplete="list">
+        <ul id="typed-list" role="listbox" aria-label="Matching lines"></ul>
+      </div>
+
+      <p class="choices-hint" id="choices-hint">Pick the line. Three guesses — a wrong one sharpens the map and unlocks another hint.</p>
+      <button type="button" id="mode-toggle"></button>
     </div>
 
     <section class="card" id="result" hidden aria-live="polite"></section>
@@ -468,8 +517,10 @@ const PER_DAY = 3;
 const LAUNCH = "2026-09-29";          // day #1 of the line game
 const DECK_SEED = 20260929;
 
-const STORE = { day: "mtg:lines:day", stats: "mtg:lines:stats", recent: "mtg:lines:recent" };
+const STORE = { day: "mtg:lines:day", stats: "mtg:lines:stats", recent: "mtg:lines:recent",
+                typed: "mtg:lines:typed" };
 const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
+const MARK = { hint: "\u{1F4A1}", typed: "\u{2328}\u{FE0F}" };   // help taken · answered by typing
 const VERDICT_NOTE = { correct: "", near: "same part of London", far: "nowhere near it" };
 
 const state = {
@@ -480,6 +531,9 @@ const state = {
   results: [],           // per puzzle: { guesses, status, revealed }
   mode: "daily",         // "daily" | "practice"
   practice: null,        // { line, guesses, status, revealed }
+  typed: false,          // answer by typing the name rather than picking a button
+  matches: [],           // lines matching what has been typed so far
+  highlighted: -1,       // which of those Enter would pick
 };
 
 const $ = (id) => document.getElementById(id);
@@ -791,9 +845,31 @@ function renderGuesses() {
   }
 }
 
+/* Two ways to answer. Round-3 feedback from a Londoner was that eleven visible
+ * buttons make it too easy — "make it like a text box where I can type the
+ * line name". The buttons stay, because they are what lets a player who does
+ * not know London play at all, and the same round had a tester asking for
+ * *more* help, not less. So typing is an opt-in alternative rather than a
+ * replacement, and the choice is remembered (ADR-028).
+ *
+ * Typing is harder in a real way: you have to produce the name rather than
+ * recognise it among ten others. The share grid marks it, for the same reason
+ * it marks a hint — a self-imposed difficulty nobody can see is not worth
+ * choosing. */
 function renderChoices() {
   const p = current();
   $("choices-wrap").hidden = p.status !== "playing";
+  $("choices").hidden = state.typed;
+  $("typed").hidden = !state.typed;
+  $("choices-hint").textContent = state.typed
+    ? "Type the line name. Three guesses — a wrong one sharpens the map and unlocks another hint."
+    : "Pick the line. Three guesses — a wrong one sharpens the map and unlocks another hint.";
+  $("mode-toggle").textContent = state.typed
+    ? "Show the buttons instead"
+    : "Harder: type the answer instead";
+
+  if (state.typed) { renderTypedList(); return; }
+
   const box = $("choices");
   box.innerHTML = "";
   for (const id of state.ids) {
@@ -805,6 +881,73 @@ function renderChoices() {
     b.addEventListener("click", () => guess(id));
     box.appendChild(b);
   }
+}
+
+/** Fold case and punctuation so "hammersmith and city" finds "Hammersmith & City". */
+function normalise(text) {
+  return text.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Lines still guessable whose name contains the query. An empty query shows
+ *  nothing: the point of this mode is to recall the name, not browse for it. */
+function typedMatches(query) {
+  const p = current();
+  const q = normalise(query);
+  if (!q) return [];
+  return state.ids.filter((id) => !p.guesses.includes(id) && normalise(state.lines[id].name).includes(q));
+}
+
+function renderTypedList() {
+  const list = $("typed-list");
+  list.innerHTML = "";
+  state.matches.forEach((id, i) => {
+    const li = document.createElement("li");
+    li.id = `typed-opt-${i}`;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(i === state.highlighted));
+    li.textContent = state.lines[id].name;
+    // mousedown, not click: a blur would tear the list down first.
+    li.addEventListener("mousedown", (e) => { e.preventDefault(); guess(id); });
+    list.appendChild(li);
+  });
+  const input = $("typed-input");
+  input.setAttribute("aria-expanded", String(state.matches.length > 0));
+  input.setAttribute("aria-activedescendant",
+    state.highlighted >= 0 ? `typed-opt-${state.highlighted}` : "");
+}
+
+function onTypedInput() {
+  state.matches = typedMatches($("typed-input").value);
+  state.highlighted = state.matches.length ? 0 : -1;
+  renderTypedList();
+}
+
+/* Enter never submits raw text — it only ever picks a highlighted line, which
+   is the rule the station game settled on in ADR-012. */
+function onTypedKey(e) {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    if (!state.matches.length) return;
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    state.highlighted = (state.highlighted + step + state.matches.length) % state.matches.length;
+    renderTypedList();
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (state.highlighted >= 0) guess(state.matches[state.highlighted]);
+  } else if (e.key === "Escape") {
+    $("typed-input").value = "";
+    onTypedInput();
+  }
+}
+
+function setTypedMode(on) {
+  state.typed = on;
+  try { localStorage.setItem(STORE.typed, on ? "1" : "0"); } catch (err) { /* private browsing */ }
+  $("typed-input").value = "";
+  state.matches = [];
+  state.highlighted = -1;
+  renderChoices();
+  if (on) $("typed-input").focus();
 }
 
 function statsMarkup() {
@@ -892,6 +1035,12 @@ function guess(id) {
   const answer = current().line;
   if (p.status !== "playing" || p.guesses.includes(id)) return;
   p.guesses.push(id);
+  // Sticky for the puzzle: once a guess has been typed, the row is marked
+  // even if the player switches back to the buttons partway through.
+  if (state.typed) p.typed = true;
+  $("typed-input").value = "";
+  state.matches = [];
+  state.highlighted = -1;
   if (id === answer) p.status = "won";
   else if (p.guesses.length >= MAX_GUESSES) p.status = "lost";
   if (state.mode === "daily") {
@@ -918,7 +1067,7 @@ function startPractice() {
   const line = pool[Math.floor(Math.random() * pool.length)];
   save(STORE.recent, [line, ...recent].slice(0, 5));
   state.mode = "practice";
-  state.practice = { line, guesses: [], status: "playing", revealed: [] };
+  state.practice = { line, guesses: [], status: "playing", revealed: [], typed: false };
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -931,14 +1080,17 @@ function backToDaily() {
 
 /* --------------------------------------------------------------- sharing -- */
 
-/* A row ends in 💡 if any hint was turned over for that line. Once help is
- * free for the asking it has to be visible, or solving it unaided — which is
- * the harder, better game — looks identical to being handed the answer. */
+/* A row carries 💡 if a hint was turned over and ⌨️ if the answer was typed
+ * rather than picked from the buttons. Both exist for the same reason: the
+ * game now lets a player choose how hard to make it, and a difficulty nobody
+ * can see is not worth choosing. Without these, solving one unaided looks
+ * identical to being handed it. */
 function shareText() {
   const solved = state.results.filter((r) => r.status === "won").length;
   const rows = state.today.map((id, i) => {
     const r = state.results[i];
-    return r.guesses.map((g) => SQUARES[verdict(g, id)]).join("") + (r.revealed.length ? " \u{1F4A1}" : "");
+    const marks = [r.typed ? MARK.typed : "", r.revealed.length ? MARK.hint : ""].filter(Boolean).join("");
+    return r.guesses.map((g) => SQUARES[verdict(g, id)]).join("") + (marks ? " " + marks : "");
   }).join("\n");
   return `Mind the Gap — lines, day #${state.day}: ${solved}/${PER_DAY}\n${rows}\n${location.origin}${location.pathname}`;
 }
@@ -1011,7 +1163,7 @@ async function start() {
 
   state.day = Math.max(1, daysBetween(LAUNCH, londonDate()) + 1);
   state.today = linesForDay(state.day);
-  state.results = state.today.map(() => ({ guesses: [], status: "playing", revealed: [] }));
+  state.results = state.today.map(() => ({ guesses: [], status: "playing", revealed: [], typed: false }));
 
   // Resume today if there is a saved game; any other day's is ignored.
   const saved = load(STORE.day, null);
@@ -1020,9 +1172,16 @@ async function start() {
       guesses: (r.guesses || []).filter((g) => state.lines[g]),
       status: r.status === "won" || r.status === "lost" ? r.status : "playing",
       revealed: Array.isArray(r.revealed) ? r.revealed.filter(Number.isInteger) : [],
+      typed: r.typed === true,
     }));
     state.idx = Math.min(PER_DAY - 1, Math.max(0, saved.idx | 0));
   }
+
+  try { state.typed = localStorage.getItem(STORE.typed) === "1"; } catch (err) { /* private browsing */ }
+  $("typed-input").addEventListener("input", onTypedInput);
+  $("typed-input").addEventListener("keydown", onTypedKey);
+  $("mode-toggle").addEventListener("click", () => setTypedMode(!state.typed));
+
   render();
 }
 
