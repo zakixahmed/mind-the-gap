@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Two hints are now available before the first guess instead of none: with only
+  three guesses, locking all help behind a wrong one meant paying a third of
+  your attempts to get any. Round-3 feedback; see ADR-026.
+- The line's station count is now the first hint rather than a line on the
+  result card. A tester spotted it there and read it as a clue that had arrived
+  too late — it had. It is the one clue that needs no knowledge of London.
+
+### Added
+- The share grid marks a line solved with help (`💡`), so that solving one
+  unaided still reads differently from being handed it.
+
 ## [0.3.0] — 2026-09-29
 
 The line game, in response to round-2 feedback: v2 still only worked for

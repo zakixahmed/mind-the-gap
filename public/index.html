@@ -436,7 +436,7 @@ footer a { color: var(--muted); }
 
     <div id="choices-wrap">
       <div class="choices" id="choices" role="group" aria-label="Choose a line"></div>
-      <p class="choices-hint">Pick the line. Three guesses — a wrong one sharpens the map and unlocks a hint.</p>
+      <p class="choices-hint">Pick the line. Three guesses — a wrong one sharpens the map and unlocks another hint.</p>
     </div>
 
     <section class="card" id="result" hidden aria-live="polite"></section>
@@ -659,13 +659,32 @@ function renderMap() {
   if (level < MAX_GUESSES) new Image().src = `lines/${p.line}/${level + 1}.webp`;
 }
 
-/** Hints unlock face down with each wrong guess and are turned over by
- *  tapping, as in v2: the player chooses when to take help. */
+/* Hints sit face down and are turned over by tapping: the player chooses when
+ * to take help, as in v2. What changed in v0.3.1 is *when* they become
+ * available (round-3 feedback, docs/versions/v3/FEEDBACK.md).
+ *
+ * Previously every rung was locked until a wrong guess, which meant that with
+ * only three guesses a player had to spend one before any help existed. A
+ * tester put it plainly: they wanted "a little more information on the map"
+ * from the start. So the first two rungs are open immediately and the third is
+ * the one a wrong guess buys.
+ *
+ * The first rung is the line's station count. That number used to appear only
+ * on the result card, after the answer — the same tester noticed it there and
+ * read it as a clue that had arrived too late, which it was. It is a good
+ * opening clue precisely because it needs no London knowledge: it narrows
+ * eleven lines without naming a single place. */
 function renderHints() {
   const p = current();
   const h = state.hints[p.line];
-  const ladder = [{ label: "Landmark", text: h.first }, { label: "More", text: h.second }];
-  const unlocked = Math.min(p.guesses.filter((g) => g !== p.line).length, ladder.length);
+  const count = state.lines[p.line].stations;
+  const ladder = [
+    { label: "Stops", text: `This line has <strong>${count}</strong> stations.` },
+    { label: "Landmark", text: h.first },
+    { label: "More", text: h.second },
+  ];
+  const FREE = 2;  // open from the start; the rest are bought with wrong guesses
+  const unlocked = Math.min(FREE + p.guesses.filter((g) => g !== p.line).length, ladder.length);
   const list = $("hints");
   list.innerHTML = "";
   for (let i = 0; i < unlocked; i++) {
@@ -841,9 +860,15 @@ function backToDaily() {
 
 /* --------------------------------------------------------------- sharing -- */
 
+/* A row ends in 💡 if any hint was turned over for that line. Once help is
+ * free for the asking it has to be visible, or solving it unaided — which is
+ * the harder, better game — looks identical to being handed the answer. */
 function shareText() {
   const solved = state.results.filter((r) => r.status === "won").length;
-  const rows = state.today.map((id, i) => state.results[i].guesses.map((g) => SQUARES[verdict(g, id)]).join("")).join("\n");
+  const rows = state.today.map((id, i) => {
+    const r = state.results[i];
+    return r.guesses.map((g) => SQUARES[verdict(g, id)]).join("") + (r.revealed.length ? " \u{1F4A1}" : "");
+  }).join("\n");
   return `Mind the Gap — lines, day #${state.day}: ${solved}/${PER_DAY}\n${rows}\n${location.origin}${location.pathname}`;
 }
 
