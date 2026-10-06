@@ -53,6 +53,24 @@ day, landmark hints and a fun fact after every answer. The station game is
 kept as hard mode. The reasoning, and the trade-offs accepted, are in ADR-025
 in `docs/DECISIONS.md`.
 
+## Measured, not asked: the yellow square means almost nothing
+
+One of the questions below — do the yellow squares mean anything? — turned out
+to be answerable from the data rather than from testers. Of the 55 possible
+pairs of lines, 48 share at least one station. So a wrong guess comes back 🟨
+**87% of the time**, and the squares carry almost no information.
+
+It is worse than the bare number suggests. Six of the seven pairs that share no
+station involve the Waterloo & City line, which has two stations. In practice a
+black square does not mean "nowhere near" — it means "you guessed Waterloo &
+City".
+
+A fix needs a sharper test than "shares any station". Candidates: shares an
+*interchange the route actually runs through* several stops in a row, shares a
+terminus, or runs through the same part of London. Any of them would make the
+share grid readable as a record of how close you got, which is the whole point
+of borrowing Wordle's grid.
+
 ## Worth asking testers
 
 - Could you solve them without knowing London? (The point of v3.)
