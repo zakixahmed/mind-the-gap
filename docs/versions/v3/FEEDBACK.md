@@ -65,11 +65,12 @@ station involve the Waterloo & City line, which has two stations. In practice a
 black square does not mean "nowhere near" — it means "you guessed Waterloo &
 City".
 
-A fix needs a sharper test than "shares any station". Candidates: shares an
+**Fixed in ADR-027.** A fix needed a sharper test than "shares any station". Candidates: shares an
 *interchange the route actually runs through* several stops in a row, shares a
-terminus, or runs through the same part of London. Any of them would make the
-share grid readable as a record of how close you got, which is the whole point
-of borrowing Wordle's grid.
+terminus, or runs through the same part of London. The test now used is the
+first two combined: a guess is near if it shares a run of three consecutive
+stops, or if half of it lies within 1.5 km of the answer's route. That takes
+yellow from 87% of wrong guesses to 32%, measured against the live page.
 
 ## Worth asking testers
 

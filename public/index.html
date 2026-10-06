@@ -470,10 +470,10 @@ const DECK_SEED = 20260929;
 
 const STORE = { day: "mtg:lines:day", stats: "mtg:lines:stats", recent: "mtg:lines:recent" };
 const SQUARES = { correct: "\u{1F7E9}", near: "\u{1F7E8}", far: "\u{2B1B}" };
-const VERDICT_NOTE = { correct: "", near: "shares a station with it", far: "no stations in common" };
+const VERDICT_NOTE = { correct: "", near: "same part of London", far: "nowhere near it" };
 
 const state = {
-  lines: {}, hints: {}, facts: {}, ids: [], stationsOf: {},
+  lines: {}, hints: {}, facts: {}, ids: [], stationsOf: {}, coordsOf: {}, adjacent: {},
   day: 0,
   today: [],             // the day's three line ids
   idx: 0,                // which of the three is on screen
@@ -609,10 +609,81 @@ function dayFinished() {
 }
 
 /** 🟩 right · 🟨 the guessed line shares at least one station with the answer · ⬛ none. */
+/* How close a wrong guess was. Rewritten in v0.3.1 because the first version
+ * — "do these two lines share any station at all?" — turned out to carry
+ * almost no information. 48 of the 55 line pairs share a station, so 87% of
+ * wrong guesses came back yellow, and six of the seven exceptions involve the
+ * two-stop Waterloo & City line. A black square did not mean "nowhere near";
+ * it meant "you guessed Waterloo & City". A share grid of near-identical
+ * yellow rows tells the person reading it nothing, which defeats the point of
+ * borrowing Wordle's grid in the first place.
+ *
+ * Eleven lines crossing one city nearly all touch somewhere, so touching is
+ * the wrong question. Two tests replace it, either of which counts as near:
+ *
+ *   1. The lines run alongside each other — they share a stretch of at least
+ *      three consecutive stops, not just an interchange where they cross.
+ *   2. At least half the guessed line sits within 1.5 km of the answer's
+ *      route, i.e. it covers the same part of London.
+ *
+ * Together these are yellow for 32% of wrong guesses rather than 87%, and a
+ * yellow now tells a player something they can act on: you are in the right
+ * part of town. Note that test 2 is deliberately asymmetric — it asks how much
+ * of *your guess* lies near the answer — so guessing a short central line
+ * against a long one is near, while the reverse is not. That is the more
+ * useful reading: it says your guess is inside the answer's territory. */
+const NEAR_KM = 1.5;        // "the same part of London", roughly a 20-minute walk
+const NEAR_SHARE = 0.5;     // how much of the guess has to be that close
+const ALONGSIDE = 3;        // consecutive shared stops that count as running together
+
+function kmBetween(a, b) {
+  // Flat-earth; over a few km across London the error is far below the
+  // threshold this feeds, and it avoids a haversine for no gain.
+  return Math.hypot((b.lat - a.lat) * 110.54,
+                    (b.lon - a.lon) * 111.32 * Math.cos(a.lat * Math.PI / 180));
+}
+
+/** Longest chain of shared stations that are adjacent on the network. */
+function longestSharedRun(guess, answer) {
+  const theirs = state.stationsOf[answer];
+  const shared = new Set([...state.stationsOf[guess]].filter((s) => theirs.has(s)));
+  const seen = new Set();
+  let best = 0;
+  for (const start of shared) {
+    if (seen.has(start)) continue;
+    seen.add(start);
+    const stack = [start];
+    let size = 0;
+    while (stack.length) {
+      const cur = stack.pop();
+      size++;
+      for (const n of state.adjacent[cur] || []) {
+        if (shared.has(n) && !seen.has(n)) { seen.add(n); stack.push(n); }
+      }
+    }
+    best = Math.max(best, size);
+  }
+  return best;
+}
+
+const verdictCache = new Map();   // verdict() runs on every render; the answer never changes
+
 function verdict(guess, answer) {
   if (guess === answer) return "correct";
-  const theirs = state.stationsOf[answer];
-  return [...state.stationsOf[guess]].some((s) => theirs.has(s)) ? "near" : "far";
+  const key = `${guess}|${answer}`;
+  if (verdictCache.has(key)) return verdictCache.get(key);
+
+  let result = "far";
+  if (longestSharedRun(guess, answer) >= ALONGSIDE) {
+    result = "near";
+  } else {
+    const theirs = state.coordsOf[answer];
+    const mine = state.coordsOf[guess];
+    const close = mine.filter((a) => theirs.some((b) => kmBetween(a, b) <= NEAR_KM)).length;
+    if (close / mine.length >= NEAR_SHARE) result = "near";
+  }
+  verdictCache.set(key, result);
+  return result;
 }
 
 /** A scale bar about a fifth of the frame wide, in a round number of km. */
@@ -929,8 +1000,14 @@ async function start() {
   state.facts = facts.facts || {};
   // Alphabetical, so the buttons are easy to scan and don't hint at anything.
   state.ids = Object.keys(state.lines).sort((a, b) => state.lines[a].name.localeCompare(state.lines[b].name));
-  for (const id of state.ids) state.stationsOf[id] = new Set();
-  for (const s of stations.stations) for (const l of s.lines) state.stationsOf[l]?.add(s.slug);
+  for (const id of state.ids) { state.stationsOf[id] = new Set(); state.coordsOf[id] = []; }
+  for (const s of stations.stations) {
+    state.adjacent[s.slug] = s.adjacent || [];
+    for (const l of s.lines) {
+      state.stationsOf[l]?.add(s.slug);
+      state.coordsOf[l]?.push({ lat: s.lat, lon: s.lon });
+    }
+  }
 
   state.day = Math.max(1, daysBetween(LAUNCH, londonDate()) + 1);
   state.today = linesForDay(state.day);

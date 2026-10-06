@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result card. A tester spotted it there and read it as a clue that had arrived
   too late — it had. It is the one clue that needs no knowledge of London.
 
+- A wrong guess is only "near" now if the two lines run alongside each other or
+  cover the same part of London. It used to mean they shared any station at
+  all, which was true of 87% of wrong guesses — the share grid was a column of
+  yellow squares that recorded nothing. Now 32%. See ADR-027.
+
 ### Added
 - The share grid marks a line solved with help (`💡`), so that solving one
   unaided still reads differently from being handed it.
