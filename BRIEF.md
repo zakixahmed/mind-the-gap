@@ -76,6 +76,58 @@ Start with your plan for phase 1.
 
 _Updated at the end of every session. Newest first._
 
+### 2026-10-06 — after session 7 (round-3 feedback answered)
+
+All three round-3 testers have been responded to in code. `main` is pushed and
+live; `v0.3.1` is **not yet tagged** (see below).
+
+**Done**
+- Two hints now open before the first guess instead of none (ADR-026). With only
+  three guesses, locking all help behind a wrong one meant paying a third of
+  your attempts to get any. The ladder is Stops → Landmark → More.
+- The line's station count became the first hint rather than a line on the
+  result card. A tester had spotted it there and read it as a clue that arrived
+  too late — it had. It is the only clue needing no knowledge of London.
+- **The yellow square now means something** (ADR-027). "Shares any station" was
+  true of 48 of the 55 line pairs, so 87% of wrong guesses came back yellow and
+  the share grid recorded nothing; six of the seven exceptions involve the
+  two-stop Waterloo & City, so black meant "you guessed Waterloo & City". Near
+  now means the lines run alongside each other (three consecutive shared stops)
+  or half the guess lies within 1.5 km of the answer's route. Yellow: 87% → 32%,
+  measured against the live page.
+- Typing the answer is now an opt-in alternative to the eleven buttons
+  (ADR-028), answering the Londoner who found them too easy without removing
+  what lets a non-Londoner play at all.
+- The share grid marks a line solved with a hint (💡) or answered by typing
+  (⌨️). Once players choose their own difficulty, one nobody can see is not
+  worth choosing.
+
+**Next — start here**
+1. Tag and push `v0.3.1`: `git tag -a v0.3.1 -m "..." && git push origin v0.3.1`.
+   CHANGELOG's `[Unreleased]` section holds its notes and needs renaming to
+   `[0.3.1] — <date>` first. Also add `docs/versions/v3/` notes if the version
+   history pages should cover it.
+2. Round-4 feedback. Both of this session's gameplay changes need real players,
+   not more reasoning. The questions are in `docs/versions/v3/FEEDBACK.md` —
+   add to them: **did anyone notice the "Harder: type the answer instead"
+   toggle?** An opt-in nobody finds is the same as not having shipped it. And:
+   do the squares read as meaning anything now?
+3. Phase 6, still open for both modes: how-to-play screen on first visit, light
+   mode toggle. This is the last unfinished phase of the original brief.
+4. Desktop layout bug: the "N guesses left" label sits under the map's right
+   edge rather than the column's.
+5. `fetch_osm_local.py` fails loudly on an HTML download but not a truncated
+   .pbf — the failure mode that actually cost a session on 27 September.
+
+**Notes**
+- Both thresholds in the new verdict (`NEAR_KM`, `ALONGSIDE`) are named
+  constants near the top of `verdict()` in `public/index.html`. They are
+  judgement calls; a later round may want to move them.
+- Tester 3's "add more games, this was fun" is unaddressed and ambiguous —
+  worth asking whether they meant more puzzles a day or a different puzzle.
+- Git still leaves lock files this environment cannot delete; they are moved to
+  `_to_delete/` (gitignored), safe to empty by hand.
+
 ### 2026-09-29 — after session 6 (v0.3.0: the line game)
 
 **Done**
